@@ -1,0 +1,30 @@
+<svg width="200" height="200" viewBox="0 0 56 56" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="60%" r="60%">
+      <stop offset="0%" stop-color="#3E2B63" />
+      <stop offset="100%" stop-color="#1B3158" />
+    </radialGradient>
+    <linearGradient id="arc" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#F59E0B" />
+      <stop offset="100%" stop-color="#EF4444" />
+    </linearGradient>
+    <linearGradient id="glow" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#F59E0B" stop-opacity="0.3" />
+      <stop offset="100%" stop-color="#EF4444" stop-opacity="0.0" />
+    </linearGradient>
+  </defs>
+  <!-- 圆形背景 -->
+  <circle cx="28" cy="28" r="28" fill="url(#bg)" />
+  <!-- 光晕 -->
+  <ellipse cx="28" cy="38" rx="22" ry="8" fill="url(#glow)" />
+  <!-- 日出弧线 -->
+  <path d="M10 35 Q28 14 46 35" stroke="url(#arc)" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+  <!-- 地平线 -->
+  <line x1="8" y1="38" x2="48" y2="38" stroke="#F59E0B" stroke-width="1.2" stroke-opacity="0.6"/>
+  <!-- GM 文字 -->
+  <text x="28" y="33" text-anchor="middle" font-size="13" font-weight="800" font-family="system-ui,sans-serif" fill="white" letter-spacing="-0.5">GM</text>
+  <!-- 底部三环（通缩螺旋） -->
+  <circle cx="28" cy="45" r="4.5" stroke="#F59E0B" stroke-width="1" fill="none" stroke-opacity="0.8"/>
+  <circle cx="28" cy="45" r="2.8" stroke="#F59E0B" stroke-width="0.8" fill="none" stroke-opacity="0.5"/>
+  <circle cx="28" cy="45" r="1.2" fill="#F59E0B" fill-opacity="0.6"/>
+</svg>

@@ -1,0 +1,31 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+
+# Environment variables — NEVER commit
+.env
+.env.*
+!.env.example
+
+# Circle credentials — NEVER commit
+.circle/
+**/recovery_file*
+**/entity_secret*
+
+# Foundry build artifacts
+contracts/out/
+contracts/cache/
+
+# Logs
+*.log
+/tmp/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/
