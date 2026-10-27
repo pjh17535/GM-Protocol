@@ -131,7 +131,7 @@ export function DeflationCurveChart() {
       <div className={cardBase}>
         <h3 className="text-white font-semibold text-base mb-0.5">C.6 gArc 通缩曲线（反向二次函数）</h3>
         <p className="text-gray-400 text-xs mb-3">
-          公式：C(t) = 1 − (1 − t/6)²，6年期望总销毁 47.9 亿枚，最终流通底线 2.1 亿枚
+          公式：C(t) = 1 − (1 − t/6)²，铸造100亿立即销毁2.1亿，有效97.9亿，Claim池47.9亿耗尽后LP剩余2.1亿
         </p>
         <ResponsiveContainer width="100%" height={260}>
           <LineChart data={curve} margin={{ top: 10, right: 20, bottom: 20, left: 0 }}>
