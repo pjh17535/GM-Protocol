@@ -45,7 +45,11 @@ const CARD = '#131A2A'
 const PANEL = '#1B2236'
 const PILL = '#2A3350'
 const LINE = 'rgba(255,255,255,0.08)'
-const PINK = '#FC72FF'
+// Brand: GM Protocol logo sunrise (amber to coral) on Arc navy
+const ACCENT = '#F59E0B'
+const ACCENT_SOFT = 'rgba(245,158,11,0.16)'
+const CTA_GRADIENT = 'linear-gradient(135deg, #F59E0B 0%, #F97316 55%, #EF4444 100%)'
+const CTA_TEXT = '#1B3158'
 const FONT = "'DM Sans', ui-sans-serif, system-ui, sans-serif"
 
 function fmtAmount(v: bigint | undefined, decimals: number, maxFrac = 6): string {
@@ -73,7 +77,7 @@ function TokenBadge({ side }: { side: Side }) {
       {side.symbol === 'USDC' ? (
         <TokenUSDC size={26} variant="branded" />
       ) : (
-        <span className="size-[26px] rounded-full flex items-center justify-center text-[13px] font-bold text-[#1a0b2e]" style={{ background: `linear-gradient(135deg, ${PINK}, #7C5CFF)` }}>g</span>
+        <span className="size-[26px] rounded-full flex items-center justify-center text-[13px] font-bold text-[#1B3158]" style={{ background: 'linear-gradient(135deg, #F59E0B, #EF4444)' }}>g</span>
       )}
       {side.symbol}
     </span>
@@ -290,7 +294,7 @@ export default function SwapModal({ onClose }: { onClose: () => void }) {
               placeholder="0"
               aria-label={`Amount of ${from.symbol} to sell`}
               className="swap-input"
-              style={{ flex: 1, minWidth: 0, width: '100%', background: 'transparent', border: 'none', outline: 'none', padding: 0, color: '#fff', caretColor: PINK, fontFamily: 'inherit', fontSize: 40, lineHeight: '48px', fontWeight: 500, fontVariantNumeric: 'tabular-nums' }}
+              style={{ flex: 1, minWidth: 0, width: '100%', background: 'transparent', border: 'none', outline: 'none', padding: 0, color: '#fff', caretColor: ACCENT, fontFamily: 'inherit', fontSize: 40, lineHeight: '48px', fontWeight: 500, fontVariantNumeric: 'tabular-nums' }}
             />
             <TokenBadge side={from} />
           </div>
@@ -300,7 +304,7 @@ export default function SwapModal({ onClose }: { onClose: () => void }) {
               <button
                 onClick={() => setAmountStr(formatUnits(fromBal, from.decimals))}
                 className="px-2 py-0.5 rounded-lg text-xs font-semibold hover:opacity-80 transition-opacity"
-                style={{ background: `${PINK}26`, color: PINK }}
+                style={{ background: ACCENT_SOFT, color: ACCENT }}
               >
                 Max
               </button>
@@ -432,7 +436,7 @@ function Cta({ children, onClick, disabled, danger }: { children: React.ReactNod
     ? { background: PILL, color: '#8B93AD' }
     : danger
       ? { background: '#F0475B', color: '#fff' }
-      : { background: PINK, color: '#2B0B33' }
+      : { background: CTA_GRADIENT, color: CTA_TEXT }
   return (
     <button
       onClick={onClick}

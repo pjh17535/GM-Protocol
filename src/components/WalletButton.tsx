@@ -39,7 +39,7 @@ export default function WalletButton({ className = '' }: { className?: string })
         {({ show }) => (
           <button
             onClick={show}
-            className={`shrink-0 px-3.5 py-1.5 rounded-full text-xs font-semibold bg-[#FC72FF]/15 text-[#FC72FF] hover:bg-[#FC72FF]/25 transition-colors ${className}`}
+            className={`shrink-0 px-3.5 py-1.5 rounded-full text-xs font-semibold bg-[#F59E0B]/15 text-[#F59E0B] hover:bg-[#F59E0B]/25 transition-colors ${className}`}
           >
             Connect wallet
           </button>
