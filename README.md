@@ -25,6 +25,8 @@ Every single USDC that leaves the system — whether as user rewards, founder al
 - (9/8)x buyback-and-burn on every single Claim — no exceptions
 - Partner ecosystem: GMPartner contract template, 5-page frontend with Partners public registry and in-app fund injection UI
 - Gasless community feedback: connect a wallet and sign a message (no transaction) to post on the Protocol page and on each partner card; newest first, 3 posts per address per day
+- Partner check-ins on the GM page and real soulbound badge cards on My GM
+- Daily snapshot keeper script (`bun run ./scripts/daily-snapshot.ts`) so queued milestone claims become claimable
 - In-app gARC swap panel (USDC and gARC) on the Arc Testnet Uniswap V2 pool
 - DAO governance: SBT + consecutive check-in weighted voting, 50% attack resistant
 - Progressive identity verification (silent at entry, increasingly strict at higher milestones)
@@ -98,6 +100,7 @@ bun install
 | `RPC_PROXY_BASE_URL` | Arc Studio RPC proxy (optional outside Arc Studio) | No |
 | `RPC_PROXY_TOKEN` | Arc Studio RPC proxy token | No |
 | `RPC_PROXY_CHAINS` | Comma-separated proxy chain keys | No |
+| `SNAPSHOT_PRIVATE_KEY` | Wallet used by the daily snapshot script (also a GitHub Actions secret). Needs a little testnet USDC for gas | No |
 | `COMMENTS_ADMIN_TOKEN` | Netlify site variable. Enables removing spam feedback via the comments function. Leave unset to disable moderation | No |
 
 ### Run

@@ -83,3 +83,9 @@ bun run dev
 - Lesson: after any addLiquidity, read pair reserves and assert them. On a re-seed of a non-empty pair, use direct transfer + `pair.mint`, or set amountMin close to desired.
 - SECURITY (mainnet blocker): `GMPool.setCheckinContract` is onlyOwner, so the owner can point it at any address and call `withdrawGArc`, draining the Claim pool. This contradicts the "no privileged exit" claim. Before mainnet make checkinContract immutable or put it behind a timelock/multisig.
 - Mainnet launch checklist: split the supply at TGE (4.79B to GMPool, 5B to LP, then abandon LP authority).
+
+## Keeper, partner check-in, SBT badges (added 2026-11-04)
+- Daily snapshot: `scripts/daily-snapshot.ts` (`--dry-run` to read only). Executes `executeSnapshot(day)` for finished UTC days with queued claims on GMCheckIn v3.1 and every live partner. Only days before today are executed, because a claim can still be queued on today's index and an early snapshot would strand it. Scheduled by `docs/ci/daily-snapshot.yml` (copy it to `.github/workflows/` from the GitHub web UI, because the sandbox token cannot push workflow files) at 00:10 UTC; needs repo secret `SNAPSHOT_PRIVATE_KEY` (dedicated low-balance wallet, never the deployer key). The execute path has not been exercised live yet because no claim has been queued.
+- GM page partner check-ins: `src/components/PartnerCheckins.tsx` lists partners with a contract address from `src/data/partners.ts`.
+- My GM badges: `src/components/SbtBadges.tsx` reads real tokens via `getUserTokens`, `getTokenInfo`, and the onchain `tokenURI` art.
+- Partner application form: question list in `docs/partner-application-form.md`; set `GOOGLE_FORM_URL` in `src/data/partners.ts` once the form exists.

@@ -1,0 +1,22 @@
+name: Daily snapshot
+
+# Executes finished-day snapshots for GMCheckIn and live GMPartner contracts so
+# queued milestone claims can be claimed. Needs one repository secret:
+#   SNAPSHOT_PRIVATE_KEY  (a dedicated wallet holding a little Arc Testnet USDC for gas)
+
+on:
+  schedule:
+    - cron: "10 0 * * *"   # 00:10 UTC, after the previous day is closed
+  workflow_dispatch: {}
+
+jobs:
+  snapshot:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      - run: bun install --frozen-lockfile
+      - name: Execute pending snapshots
+        env:
+          SNAPSHOT_PRIVATE_KEY: ${{ secrets.SNAPSHOT_PRIVATE_KEY }}
+        run: bun run ./scripts/daily-snapshot.ts

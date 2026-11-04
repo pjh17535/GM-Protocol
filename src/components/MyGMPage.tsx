@@ -3,12 +3,12 @@ import { useAccount } from 'wagmi'
 import { useReadContract, useReadContracts } from 'wagmi'
 import { ConnectKitButton } from 'connectkit'
 import { formatUnits, type Address } from 'viem'
+import SbtBadges from './SbtBadges'
 
 // ── Contract addresses (v3.1 — current active checkin contract) ───────────────
 const CHECKIN_ADDR = '0xDb04Dd85fDbcE5b76d63230264475Fcb07c316A8' as Address
 const GARC_ADDR    = '0x742f1c4D413d13913c80D9b6A35002C2b7D8b9Fc' as Address
 const USDC_ADDR    = '0x3600000000000000000000000000000000000000' as Address
-const SBT_ADDR     = '0xB845E2f69d7D5426896B4083594B3C26D4bB8ff2' as Address
 const POOL_ADDR    = '0xC3832c0169C1602D581cC6816414Ad05A855e713' as Address
 
 // ── ABIs ──────────────────────────────────────────────────────────────────────
@@ -27,12 +27,6 @@ const CHECKIN_ABI = [
 
 const ERC20_ABI = [
   { name: 'balanceOf', type: 'function', stateMutability: 'view', inputs: [{ type: 'address' }], outputs: [{ type: 'uint256' }] },
-] as const
-
-const SBT_ABI = [
-  { name: 'balanceOf', type: 'function', stateMutability: 'view', inputs: [{ type: 'address' }], outputs: [{ type: 'uint256' }] },
-  { name: 'tokenOfOwnerByIndex', type: 'function', stateMutability: 'view', inputs: [{ type: 'address' }, { type: 'uint256' }], outputs: [{ type: 'uint256' }] },
-  { name: 'tokenTier', type: 'function', stateMutability: 'view', inputs: [{ type: 'uint256' }], outputs: [{ type: 'uint8' }] },
 ] as const
 
 const POOL_ABI = [
@@ -134,15 +128,6 @@ export default function MyGMPage() {
     query: { enabled: !!address },
   })
 
-  // SBT count
-  const { data: sbtBalance } = useReadContract({
-    address: SBT_ADDR,
-    abi: SBT_ABI,
-    functionName: 'balanceOf',
-    args: address ? [address] : undefined,
-    query: { enabled: !!address },
-  })
-
   // Milestone pending claims (all 4 tiers)
   const { data: pendingDays } = useReadContracts({
     contracts: address ? MILESTONES.map(m => ({
@@ -184,9 +169,6 @@ export default function MyGMPage() {
 
   const usdcBal = balances?.[0]?.result
   const garcBal = balances?.[1]?.result
-
-  // Highest SBT tier earned (based on streak history)
-  const highestTier = MILESTONES.filter(m => total >= m.days).length - 1
 
   if (loadingUser) {
     return (
@@ -252,20 +234,8 @@ export default function MyGMPage() {
           </div>
         </div>
 
-        {/* SBT badges */}
-        {sbtBalance !== undefined && sbtBalance > 0n && (
-          <div className="bg-white/3 border border-white/8 rounded-xl p-4">
-            <p className="text-gray-400 text-xs uppercase tracking-wider mb-3">SBT Badges Earned</p>
-            <div className="flex gap-2 flex-wrap">
-              {MILESTONES.slice(0, highestTier + 1).map(m => (
-                <div key={m.tier} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full border ${m.ring} bg-white/4 text-xs font-medium`}>
-                  <span>{m.icon}</span>
-                  <span className="text-gray-200">{m.label}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
+        {/* SBT badges (real tokens, read from GMSoulBound) */}
+        {address && <SbtBadges address={address} />}
 
         {/* Milestone progress cards */}
         <div>
