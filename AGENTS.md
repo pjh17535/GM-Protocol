@@ -30,10 +30,10 @@ GM Protocol is a daily onchain check-in system built on Arc Network. Users pay a
 ## gARC Token Distribution (Arc Testnet, 正式)
 | 分配 | 数量 | 状态 |
 |------|------|------|
-| 铸造总量 | 100 亿 | 一次性铸造 |
+| 铸造总量 | 100 亿 (10B) | 一次性铸造 |
 | 初期立即销毁 | 2.1 亿 | ✅ TX: 0x6997a996b4a6e3f223165fb4004ce5e3ce38dfdd59c2645b644bde0ef7c19b9c |
-| 初始流动性 LP | 50 亿 | ✅ USDC/gARC Pair |
-| Claim 池 (GMPool v2) | ~47.9 亿 | ✅ 全部存入 GMPool v2 |
+| 初始流动性 LP | 50 亿 | ⏳ 主网 TGE 时注入；测试网 Pair 仅有 ~38.56 USDC + ~3.856 gARC 测试种子 |
+| Claim 池 (GMPool v2) | 设计 47.9 亿 | 测试网现状：GMPool v2 持有全部 ~97.9 亿（约 9.79B，已含未来 LP 份额） |
 | 终态流通底线 (LP剩余) | 2.1 亿 | 自然剩余于 LP |
 
 ## Tech Stack
@@ -72,4 +72,4 @@ bun run dev
   - Needs a Netlify deploy that includes functions (`netlify.toml` sets `netlify/functions`). A static-only upload will not serve the API.
   - Logic test: `bun run ./scripts/test-comments.ts`.
 - Swap: `src/components/SwapModal.tsx`, opened from the nav "Swap gARC" button and the Protocol page. Uses UniswapV2Router02 `0xE27d5D256B370604F1Ff060fB489c6A8E3F8A6D9` with path USDC <-> gARC.
-- Observation 2026-11-04: the LP pair `0xc0e9...8958` holds about 38.56 USDC and 3.856 gARC (not 5B). Protocol page tokenomics text still says 50B/5B LP. Needs reconciling.
+- Resolved 2026-11-04: LP pair `0xc0e9...8958` holds ~38.56 USDC + ~3.856 gARC (test seed); GMPool v2 holds ~9.79B gARC (gArcClaimBalance). The 5B LP injection is a mainnet TGE step. Protocol page now labels these as design vs testnet live values.

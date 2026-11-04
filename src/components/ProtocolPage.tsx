@@ -9,6 +9,7 @@ const CHAIN_ID = arcTestnet.id
 const POOL_ADDR    = '0xC3832c0169C1602D581cC6816414Ad05A855e713' as const
 const CHECKIN_ADDR = '0xDb04Dd85fDbcE5b76d63230264475Fcb07c316A8' as const
 const GARC_ADDR    = '0x742f1c4D413d13913c80D9b6A35002C2b7D8b9Fc' as const
+const PAIR_ADDR    = '0xc0e9695ab4e41f4477074845046b3d152c4c8958' as const
 
 // ── ABIs ──────────────────────────────────────────────────────────────────────
 const POOL_ABI = [
@@ -21,6 +22,10 @@ const CHECKIN_ABI = [
   { name: 'totalMilestoneClaims', type: 'function', stateMutability: 'view', inputs: [], outputs: [{ type: 'uint256' }] },
   { name: 'totalUsdcClaimed',     type: 'function', stateMutability: 'view', inputs: [], outputs: [{ type: 'uint256' }] },
   { name: 'totalGArcDistributed', type: 'function', stateMutability: 'view', inputs: [], outputs: [{ type: 'uint256' }] },
+] as const
+
+const PAIR_ABI = [
+  { name: 'getReserves', type: 'function', stateMutability: 'view', inputs: [], outputs: [{ type: 'uint112' }, { type: 'uint112' }, { type: 'uint32' }] },
 ] as const
 
 const ERC20_ABI = [
@@ -46,7 +51,7 @@ const CONTRACTS = [
   { name: 'GMPool v2',           addr: '0xC3832c0169C1602D581cC6816414Ad05A855e713', note: '80/10/5/5 USDC split, gARC claim pool' },
   { name: 'GMBuyback',           addr: '0x611F40BdaEfF0e247b0C454725d8e531256a070a', note: 'Uniswap V2 buyback-and-burn, 3-layer trigger' },
   { name: 'GMSoulBound (SBT)',   addr: '0xB845E2f69d7D5426896B4083594B3C26D4bB8ff2', note: 'Non-transferable identity badges, 5 on-chain SVG tiers' },
-  { name: 'USDC/gARC LP Pair',   addr: '0xc0e9695ab4e41f4477074845046b3d152c4c8958', note: 'Uniswap V2 pair, 38.56 USDC + 50B gARC' },
+  { name: 'USDC/gARC LP Pair',   addr: '0xc0e9695ab4e41f4477074845046b3d152c4c8958', note: 'Uniswap V2 pair. Testnet holds a small test seed; the main liquidity is added at mainnet launch' },
 ]
 
 const EXPLORER = 'https://explorer.testnet.arc.io/address/'
@@ -91,6 +96,10 @@ export default function ProtocolPage({ onOpenSwap }: { onOpenSwap?: () => void }
   const tuc = useReadContract({ address: CHECKIN_ADDR, abi: CHECKIN_ABI, functionName: 'totalUsdcClaimed',     chainId: CHAIN_ID })
   const tgd = useReadContract({ address: CHECKIN_ADDR, abi: CHECKIN_ABI, functionName: 'totalGArcDistributed', chainId: CHAIN_ID })
   const ts  = useReadContract({ address: GARC_ADDR,    abi: ERC20_ABI,   functionName: 'totalSupply',          chainId: CHAIN_ID })
+  const lp  = useReadContract({ address: PAIR_ADDR,    abi: PAIR_ABI,    functionName: 'getReserves',         chainId: CHAIN_ID })
+  const lpUsdc  = lp.data ? Number(formatUnits(lp.data[0], 6))  : undefined
+  const lpGarc  = lp.data ? Number(formatUnits(lp.data[1], 18)) : undefined
+  const lpPrice = lpUsdc !== undefined && lpGarc ? lpUsdc / lpGarc : undefined
 
   return (
     <div className="min-h-screen bg-[#060D1A] text-white">
@@ -128,10 +137,10 @@ export default function ProtocolPage({ onOpenSwap }: { onOpenSwap?: () => void }
             <div className="bg-purple-900/20 border border-purple-500/20 rounded-2xl p-4">
               <p className="text-gray-500 text-xs uppercase tracking-wider mb-1">gARC Claim Pool</p>
               <p className="text-xl font-bold text-purple-400 font-mono">{fmt18B(rg.data)}</p>
-              <p className="text-gray-600 text-xs">gARC</p>
+              <p className="text-gray-600 text-xs">gARC · testnet holds the full supply; mainnet design is 4.79B</p>
             </div>
             <div className="bg-blue-900/20 border border-blue-500/20 rounded-2xl p-4">
-              <p className="text-gray-500 text-xs uppercase tracking-wider mb-1">gARC Circulating Supply</p>
+              <p className="text-gray-500 text-xs uppercase tracking-wider mb-1">gARC Total Supply</p>
               <p className="text-xl font-bold text-blue-400 font-mono">{fmt18B(ts.data)}</p>
               <p className="text-gray-600 text-xs">gARC total supply (burn-only)</p>
             </div>
@@ -154,12 +163,12 @@ export default function ProtocolPage({ onOpenSwap }: { onOpenSwap?: () => void }
           <div className="bg-white/3 border border-white/8 rounded-2xl p-5 space-y-3 text-sm">
             {[
               { label: 'Total minted',          value: '10,000,000,000 gARC', note: 'One-time, no future issuance' },
-              { label: 'Initial burn (Day 1)',   value: '210,000,000 gARC',   note: 'TX irreversible, onchain verified' },
-              { label: 'Effective circulating',  value: '9,790,000,000 gARC', note: '4.79B Claim pool + 5B initial LP' },
-              { label: 'Claim pool',             value: '4,790,000,000 gARC', note: 'Held in GMPool v2, released via milestones' },
-              { label: 'Initial LP',             value: '5,000,000,000 gARC', note: '38.56 USDC + 50B gARC on Uniswap V2' },
-              { label: 'Terminal floor (LP)',    value: '210,000,000 gARC',   note: 'Natural LP residual once Claim pool is exhausted' },
-              { label: 'Claim mechanism',        value: '(9/8)× buyback-burn', note: 'Every USDC out triggers extra 12.5% burn' },
+              { label: 'Initial burn (Day 1)',   value: '210,000,000 gARC',   note: 'Irreversible, verified onchain' },
+              { label: 'Supply after burn',      value: '9,790,000,000 gARC', note: 'Mainnet design: 4.79B Claim pool + 5B initial liquidity' },
+              { label: 'Claim pool (mainnet design)', value: '4,790,000,000 gARC', note: 'Released through milestones. On testnet, GMPool v2 currently holds the whole 9.79B' },
+              { label: 'Initial liquidity (mainnet design)', value: '5,000,000,000 gARC', note: 'Added at mainnet launch (TGE). Testnet only has a small test seed, shown below' },
+              { label: 'Terminal floor',         value: '210,000,000 gARC',   note: 'What remains in liquidity once the Claim pool is fully used' },
+              { label: 'Claim mechanism',        value: '(9/8)× buyback-burn', note: 'Every USDC out triggers an extra 12.5% burn' },
             ].map(r => (
               <div key={r.label} className="flex items-start justify-between gap-4 py-2 border-b border-white/5 last:border-0">
                 <div>
@@ -169,6 +178,31 @@ export default function ProtocolPage({ onOpenSwap }: { onOpenSwap?: () => void }
                 <span className="text-gray-200 font-mono text-xs text-right shrink-0">{r.value}</span>
               </div>
             ))}
+          </div>
+        </section>
+
+        {/* ── Testnet liquidity (live) ──────────────────────────────── */}
+        <section>
+          <h2 className="text-xs font-semibold uppercase tracking-widest text-gray-500 mb-4">Testnet Liquidity — Live</h2>
+          <div className="bg-yellow-900/10 border border-yellow-500/20 rounded-2xl p-5">
+            <div className="grid grid-cols-3 gap-3 mb-3">
+              <div>
+                <p className="text-gray-500 text-xs mb-1">USDC in pool</p>
+                <p className="text-white font-mono text-sm">{lpUsdc !== undefined ? lpUsdc.toLocaleString('en-US', { maximumFractionDigits: 2 }) : '—'}</p>
+              </div>
+              <div>
+                <p className="text-gray-500 text-xs mb-1">gARC in pool</p>
+                <p className="text-white font-mono text-sm">{lpGarc !== undefined ? lpGarc.toLocaleString('en-US', { maximumFractionDigits: 3 }) : '—'}</p>
+              </div>
+              <div>
+                <p className="text-gray-500 text-xs mb-1">Implied price</p>
+                <p className="text-white font-mono text-sm">{lpPrice !== undefined ? `${lpPrice.toFixed(2)} USDC` : '—'}</p>
+              </div>
+            </div>
+            <p className="text-gray-400 text-xs leading-relaxed">
+              This is a small test seed used to check swaps and buyback-burn. The testnet price is not a market price
+              and any trade moves it sharply. The 5,000,000,000 gARC liquidity is planned for mainnet launch.
+            </p>
           </div>
         </section>
 

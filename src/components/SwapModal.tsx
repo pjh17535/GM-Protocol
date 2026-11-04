@@ -198,6 +198,14 @@ export default function SwapModal({ onClose }: { onClose: () => void }) {
           <button onClick={onClose} className="text-gray-500 hover:text-white text-xl leading-none px-2" aria-label="Close">×</button>
         </div>
 
+        {reserves && (
+          <div className="mb-3 px-3 py-2 rounded-lg bg-yellow-500/10 border border-yellow-500/20 text-[11px] text-yellow-200/90 leading-snug">
+            Testnet pool is a small test seed: {Number(formatUnits(reserves[0], 6)).toLocaleString('en-US', { maximumFractionDigits: 2 })} USDC
+            / {Number(formatUnits(reserves[1], 18)).toLocaleString('en-US', { maximumFractionDigits: 3 })} gARC.
+            Prices are not market prices and trades move them sharply.
+          </div>
+        )}
+
         {/* From */}
         <div className="bg-white/4 border border-white/8 rounded-xl p-3">
           <div className="flex justify-between text-[11px] text-gray-500 mb-1.5">
