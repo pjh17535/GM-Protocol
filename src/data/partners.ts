@@ -54,5 +54,5 @@ export const PARTNERS: Partner[] = [
 // ─── Constants ────────────────────────────────────────────────────────────────
 export const PARTNER_MIN_INJECTION_MAINNET = 2_000_000_000n // 2000 USDC (6 decimals)
 export const PARTNER_MIN_INJECTION_TESTNET = 1_000_000n     // 1 USDC minimum on testnet (symbolic)
-// TODO: Replace with actual Google Form URL. Set to empty string to show "Coming Soon" button.
-export const GOOGLE_FORM_URL = ''
+// Partner application form. Set to an empty string to show the "Coming Soon" button instead.
+export const GOOGLE_FORM_URL = 'https://forms.gle/bv6cUHCgAVhU7WmY9'
