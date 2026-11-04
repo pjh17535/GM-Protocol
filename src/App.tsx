@@ -11,6 +11,7 @@ import MyGMPage from './components/MyGMPage'
 import ProtocolPage from './components/ProtocolPage'
 import WhitepaperPage from './components/WhitepaperPage'
 import SwapModal from './components/SwapModal'
+import WalletButton from './components/WalletButton'
 
 // Public tabs (user-facing, English only)
 type PublicView = 'gm' | 'protocol' | 'partners' | 'mygm' | 'docs'
@@ -66,7 +67,7 @@ export default function App() {
           <div className="w-px h-5 bg-white/10 shrink-0" />
 
           {/* Public tabs */}
-          <div className="flex gap-1 flex-1">
+          <div className="flex gap-1 flex-1 min-w-0 overflow-x-auto">
             {PUBLIC_TABS.map(t => (
               <button
                 key={t.id}
@@ -85,9 +86,9 @@ export default function App() {
           {/* gARC swap */}
           <button
             onClick={() => setSwapOpen(true)}
-            className="shrink-0 px-3 py-1.5 rounded-lg text-xs font-medium bg-purple-600/80 hover:bg-purple-500 text-white transition-colors"
+            className="shrink-0 px-3 py-1.5 rounded-lg text-xs font-medium bg-white/10 hover:bg-white/15 text-white transition-colors"
           >
-            Swap gARC
+            Swap<span className="hidden sm:inline"> gARC</span>
           </button>
 
           {/* Testnet faucet */}
@@ -100,6 +101,9 @@ export default function App() {
           >
             Faucet
           </a>
+
+          {/* Wallet: connect / copy / disconnect */}
+          <WalletButton />
 
           {/* Dev mode tabs (hidden from public) */}
           {isDevMode && (
