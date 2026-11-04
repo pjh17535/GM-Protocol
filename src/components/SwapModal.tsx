@@ -200,9 +200,8 @@ export default function SwapModal({ onClose }: { onClose: () => void }) {
 
         {reserves && (
           <div className="mb-3 px-3 py-2 rounded-lg bg-yellow-500/10 border border-yellow-500/20 text-[11px] text-yellow-200/90 leading-snug">
-            Testnet pool is a small test seed: {Number(formatUnits(reserves[0], 6)).toLocaleString('en-US', { maximumFractionDigits: 2 })} USDC
-            / {Number(formatUnits(reserves[1], 18)).toLocaleString('en-US', { maximumFractionDigits: 3 })} gARC.
-            Prices are not market prices and trades move them sharply.
+            Testnet pool depth is only {Number(formatUnits(reserves[0], 6)).toLocaleString('en-US', { maximumFractionDigits: 2 })} USDC
+            against {fmtAmount(reserves[1], 18)} gARC. Prices are not market prices and trades move them sharply.
           </div>
         )}
 

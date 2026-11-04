@@ -32,8 +32,8 @@ GM Protocol is a daily onchain check-in system built on Arc Network. Users pay a
 |------|------|------|
 | 铸造总量 | 100 亿 (10B) | 一次性铸造 |
 | 初期立即销毁 | 2.1 亿 | ✅ TX: 0x6997a996b4a6e3f223165fb4004ce5e3ce38dfdd59c2645b644bde0ef7c19b9c |
-| 初始流动性 LP | 50 亿 | ⏳ 主网 TGE 时注入；测试网 Pair 仅有 ~38.56 USDC + ~3.856 gARC 测试种子 |
-| Claim 池 (GMPool v2) | 设计 47.9 亿 | 测试网现状：GMPool v2 持有全部 ~97.9 亿（约 9.79B，已含未来 LP 份额） |
+| 初始流动性 LP | 50 亿 | ✅ 38.56 USDC + 50 亿 gARC（2026-11-04 修复后） |
+| Claim 池 (GMPool v2) | ~47.9 亿 | ✅ gArcClaimBalance ≈ 4.79B |
 | 终态流通底线 (LP剩余) | 2.1 亿 | 自然剩余于 LP |
 
 ## Tech Stack
@@ -72,5 +72,14 @@ bun run dev
   - Needs a Netlify deploy that includes functions (`netlify.toml` sets `netlify/functions`). A static-only upload will not serve the API.
   - Logic test: `bun run ./scripts/test-comments.ts`.
 - Swap: `src/components/SwapModal.tsx`, opened from the nav "Swap gARC" button and the Protocol page. Uses UniswapV2Router02 `0xE27d5D256B370604F1Ff060fB489c6A8E3F8A6D9` with path USDC <-> gARC.
-- Resolved 2026-11-04: LP pair `0xc0e9...8958` holds ~38.56 USDC + ~3.856 gARC (test seed); GMPool v2 holds ~9.79B gARC (gArcClaimBalance). The 5B LP injection is a mainnet TGE step. Protocol page now labels these as design vs testnet live values.
-- Mainnet launch checklist (from 2026-11-04 review): on testnet all ~9.79B gARC sits in GMPool v2 and cannot be taken out by the owner. `withdrawGArc` is callable only by the GMCheckIn contract, and `emergencyWithdraw` explicitly rejects gARC and USDC. So the 5B liquidity share cannot be moved to the LP on this deployment. On mainnet, split the minted supply at TGE: deposit only 4.79B into GMPool (`depositGArc`) and add the 5B to the LP in the same launch step, then abandon LP authority.
+- LP repair 2026-11-04 (done): the first LP add on 2026-10-26 used the router while the pair still held dust reserves (1 raw USDC : 1e11 raw gARC) left from an earlier remove. The router followed that ratio and added only 38.56 USDC + 3.856 gARC instead of 5B gARC (amountMin was 0, so nothing reverted), and the remaining gARC was then deposited into GMPool. Fixed with `scripts/fix-lp.ts`: owner set GMPool.checkinContract to the deployer, `withdrawGArc(5B)`, restored checkinContract to GMCheckIn v3.1, removed the bad liquidity, transferred 38.56 USDC + 5B gARC straight to the pair and called `pair.mint` (bypasses router ratio logic). Result: pair = 38.56 USDC : 5,000,000,000 gARC; GMPool gArcClaimBalance = ~4.79B. LP tokens (~38.56e9) are held by the deployer wallet 0xe5096Af190d36CBc4363699D561EE651C07c276a.
+  - setCheckinContract(deployer): 0x3fd1bb498e6f71af217b5e3c5741b4da39ba631c0003c553b6823727baa1bd7c
+  - withdrawGArc(5B): 0x8510ad67f0122739384be625ec3da26831e7e0a53ada6e8551d27e26fe050fa3
+  - setCheckinContract(GMCheckIn v3.1): 0x54dfaabff2b10fab8b93bcc43ebae15c693be797ac1ffd164bb3041fe1c8c220
+  - removeLiquidity: 0xd862351964e7ed7c95d5f19b4eef41aaaaade8eccac2d3382e4389ba00012ff4
+  - transfer gARC to pair: 0x603a762351116e8c14da2878a7dab241d2549dd9bc2f7bb77341b240625f152a
+  - transfer USDC to pair: 0xd241314755fcbcf18260c19f3d871596037c4a7b33bda36851f7909222d6708e
+  - pair.mint: 0x0e11a2944d7e080b1e0f2d5fe05cd17101c3aa3b09525721b4dfca2b7c5c2a65
+- Lesson: after any addLiquidity, read pair reserves and assert them. On a re-seed of a non-empty pair, use direct transfer + `pair.mint`, or set amountMin close to desired.
+- SECURITY (mainnet blocker): `GMPool.setCheckinContract` is onlyOwner, so the owner can point it at any address and call `withdrawGArc`, draining the Claim pool. This contradicts the "no privileged exit" claim. Before mainnet make checkinContract immutable or put it behind a timelock/multisig.
+- Mainnet launch checklist: split the supply at TGE (4.79B to GMPool, 5B to LP, then abandon LP authority).

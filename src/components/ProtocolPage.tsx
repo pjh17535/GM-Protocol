@@ -51,7 +51,7 @@ const CONTRACTS = [
   { name: 'GMPool v2',           addr: '0xC3832c0169C1602D581cC6816414Ad05A855e713', note: '80/10/5/5 USDC split, gARC claim pool' },
   { name: 'GMBuyback',           addr: '0x611F40BdaEfF0e247b0C454725d8e531256a070a', note: 'Uniswap V2 buyback-and-burn, 3-layer trigger' },
   { name: 'GMSoulBound (SBT)',   addr: '0xB845E2f69d7D5426896B4083594B3C26D4bB8ff2', note: 'Non-transferable identity badges, 5 on-chain SVG tiers' },
-  { name: 'USDC/gARC LP Pair',   addr: '0xc0e9695ab4e41f4477074845046b3d152c4c8958', note: 'Uniswap V2 pair. Testnet holds a small test seed; the main liquidity is added at mainnet launch' },
+  { name: 'USDC/gARC LP Pair',   addr: '0xc0e9695ab4e41f4477074845046b3d152c4c8958', note: 'Uniswap V2 pair, 38.56 USDC + 5B gARC' },
 ]
 
 const EXPLORER = 'https://explorer.testnet.arc.io/address/'
@@ -137,7 +137,7 @@ export default function ProtocolPage({ onOpenSwap }: { onOpenSwap?: () => void }
             <div className="bg-purple-900/20 border border-purple-500/20 rounded-2xl p-4">
               <p className="text-gray-500 text-xs uppercase tracking-wider mb-1">gARC Claim Pool</p>
               <p className="text-xl font-bold text-purple-400 font-mono">{fmt18B(rg.data)}</p>
-              <p className="text-gray-600 text-xs">gARC · testnet holds the full supply; mainnet design is 4.79B</p>
+              <p className="text-gray-600 text-xs">gARC held for milestone claims</p>
             </div>
             <div className="bg-blue-900/20 border border-blue-500/20 rounded-2xl p-4">
               <p className="text-gray-500 text-xs uppercase tracking-wider mb-1">gARC Total Supply</p>
@@ -164,9 +164,9 @@ export default function ProtocolPage({ onOpenSwap }: { onOpenSwap?: () => void }
             {[
               { label: 'Total minted',          value: '10,000,000,000 gARC', note: 'One-time, no future issuance' },
               { label: 'Initial burn (Day 1)',   value: '210,000,000 gARC',   note: 'Irreversible, verified onchain' },
-              { label: 'Supply after burn',      value: '9,790,000,000 gARC', note: 'Mainnet design: 4.79B Claim pool + 5B initial liquidity' },
-              { label: 'Claim pool (mainnet design)', value: '4,790,000,000 gARC', note: 'Released through milestones. On testnet, GMPool v2 currently holds the whole 9.79B' },
-              { label: 'Initial liquidity (mainnet design)', value: '5,000,000,000 gARC', note: 'Added at mainnet launch (TGE). Testnet only has a small test seed, shown below' },
+              { label: 'Supply after burn',      value: '9,790,000,000 gARC', note: '4.79B Claim pool + 5B initial liquidity' },
+              { label: 'Claim pool', value: '4,790,000,000 gARC', note: 'Held in GMPool v2, released through milestones' },
+              { label: 'Initial liquidity', value: '5,000,000,000 gARC', note: '38.56 USDC + 5B gARC on Uniswap V2 (live below)' },
               { label: 'Terminal floor',         value: '210,000,000 gARC',   note: 'What remains in liquidity once the Claim pool is fully used' },
               { label: 'Claim mechanism',        value: '(9/8)× buyback-burn', note: 'Every USDC out triggers an extra 12.5% burn' },
             ].map(r => (
@@ -200,8 +200,8 @@ export default function ProtocolPage({ onOpenSwap }: { onOpenSwap?: () => void }
               </div>
             </div>
             <p className="text-gray-400 text-xs leading-relaxed">
-              This is a small test seed used to check swaps and buyback-burn. The testnet price is not a market price
-              and any trade moves it sharply. The 5,000,000,000 gARC liquidity is planned for mainnet launch.
+              The pool holds 5,000,000,000 gARC against a small amount of testnet USDC, so the implied price is
+              tiny and any trade with meaningful USDC moves it sharply. It is not a market price.
             </p>
           </div>
         </section>
