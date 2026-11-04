@@ -23,7 +23,9 @@ Every single USDC that leaves the system — whether as user rewards, founder al
 - Soulbound Token (SBT) identity credentials per milestone
 - gArc token: 10B total supply, mint-once, burn-only, deflationary curve modeled after Bitcoin
 - (9/8)x buyback-and-burn on every single Claim — no exceptions
-- Partner ecosystem: education-first tasks, shared GM streak, independent reward pools
+- Partner ecosystem: GMPartner contract template, 5-page frontend with Partners public registry and in-app fund injection UI
+- Gasless community feedback: connect a wallet and sign a message (no transaction) to post on the Protocol page and on each partner card; newest first, 3 posts per address per day
+- In-app gARC swap panel (USDC and gARC) on the Arc Testnet Uniswap V2 pool
 - DAO governance: SBT + consecutive check-in weighted voting, 50% attack resistant
 - Progressive identity verification (silent at entry, increasingly strict at higher milestones)
 
@@ -96,6 +98,7 @@ bun install
 | `RPC_PROXY_BASE_URL` | Arc Studio RPC proxy (optional outside Arc Studio) | No |
 | `RPC_PROXY_TOKEN` | Arc Studio RPC proxy token | No |
 | `RPC_PROXY_CHAINS` | Comma-separated proxy chain keys | No |
+| `COMMENTS_ADMIN_TOKEN` | Netlify site variable. Enables removing spam feedback via the comments function. Leave unset to disable moderation | No |
 
 ### Run
 
@@ -108,6 +111,14 @@ bun run dev
 ```bash
 bun run build
 ```
+
+### Test the feedback backend logic
+
+```bash
+bun run ./scripts/test-comments.ts
+```
+
+The feedback API is a Netlify Function (`netlify/functions/comments.mts`) backed by Netlify Blobs, so it only runs on Netlify (or with `netlify dev`). Deploy the site with its functions for the feedback boards to work; without it they show a "temporarily unavailable" message.
 
 ### Test Contracts
 

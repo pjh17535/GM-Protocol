@@ -57,6 +57,7 @@ contract GMCheckIn is Ownable, Pausable, ReentrancyGuard {
     bool public verificationEnabled;
     address public signer;
     mapping(address => uint8) public verifiedLevel;
+    mapping(address => bool) public registeredPartners;
 
     mapping(uint256 => uint256) public snapshotTotalClaimUsdc;
     mapping(uint256 => uint256) public snapshotReservedUsdc;
@@ -95,6 +96,7 @@ contract GMCheckIn is Ownable, Pausable, ReentrancyGuard {
     error SnapshotAlreadyExecuted(uint256 dayIndex);
     error NoClaimsToSnapshot(uint256 dayIndex);
     error InsufficientRewardPool(uint256 required, uint256 available);
+    error NotRegisteredPartner();
 
     event CheckedIn(address indexed user, uint256 dayIndex, uint256 streak, uint256 fee);
     event MilestoneQueued(address indexed user, uint8 tier, uint256 dayIndex, uint256 claimUsdc);
@@ -107,6 +109,8 @@ contract GMCheckIn is Ownable, Pausable, ReentrancyGuard {
     event SoulBoundContractUpdated(address indexed soulBound);
     event SignerUpdated(address indexed newSigner);
     event VerificationEnabledUpdated(bool enabled);
+    event PartnerCheckinRecorded(address indexed user, address indexed partner, uint256 dayIndex, uint256 streak);
+    event PartnerRegistered(address indexed partner, bool registered);
 
     constructor(address initialOwner, address _gmPool, address _gmBuyback) Ownable(initialOwner) {
         _validateNonZero(_gmPool);
@@ -152,8 +156,49 @@ contract GMCheckIn is Ownable, Pausable, ReentrancyGuard {
         USDC.safeTransferFrom(msg.sender, address(this), fee);
         USDC.forceApprove(address(gmPool), fee);
         gmPool.receiveCheckinFee(fee);
+        USDC.forceApprove(address(gmPool), 0);
 
         emit CheckedIn(msg.sender, dayIndex, user.currentStreak, fee);
+    }
+
+    /**
+     * @dev SECURITY NOTE: partnerCheckin trusts that registered partner contracts only pass the actual calling user as `user`. Partner contracts must be audited before registration. Mainnet: upgrade to signature-based user authorization.
+     */
+    function partnerCheckin(address user) external nonReentrant whenNotPaused {
+        if (!registeredPartners[msg.sender]) revert NotRegisteredPartner();
+        if (msg.sender.code.length == 0) revert NotRegisteredPartner();
+        _validateNonZero(user);
+
+        uint256 dayIndex = _currentDayIndex();
+        UserInfo storage userInfo = _users[user];
+
+        if (userInfo.lastCheckinDay == dayIndex && userInfo.totalCheckins > 0) {
+            emit PartnerCheckinRecorded(user, msg.sender, dayIndex, userInfo.currentStreak);
+            return;
+        }
+
+        if (userInfo.totalCheckins == 0) {
+            userInfo.currentStreak = 1;
+        } else {
+            if (dayIndex < userInfo.lastCheckinDay) revert InvalidCheckinDay();
+
+            if (dayIndex == userInfo.lastCheckinDay + 1) {
+                unchecked {
+                    userInfo.currentStreak += 1;
+                }
+            } else if (dayIndex > userInfo.lastCheckinDay + 1) {
+                userInfo.currentStreak = 1;
+            }
+        }
+
+        userInfo.lastCheckinDay = dayIndex;
+
+        unchecked {
+            userInfo.totalCheckins += 1;
+            totalCheckins += 1;
+        }
+
+        emit PartnerCheckinRecorded(user, msg.sender, dayIndex, userInfo.currentStreak);
     }
 
     function queueMilestoneClaim(uint8 tier) external whenNotPaused nonReentrant {
@@ -369,6 +414,11 @@ contract GMCheckIn is Ownable, Pausable, ReentrancyGuard {
     function setVerificationEnabled(bool enabled) external onlyOwner {
         verificationEnabled = enabled;
         emit VerificationEnabledUpdated(enabled);
+    }
+
+    function setPartnerRegistered(address partner, bool registered) external onlyOwner {
+        registeredPartners[partner] = registered;
+        emit PartnerRegistered(partner, registered);
     }
 
     function pause() external onlyOwner {

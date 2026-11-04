@@ -18,7 +18,9 @@ GM Protocol is a daily onchain check-in system built on Arc Network. Users pay a
 | GMToken (gARC ERC-20) — 用户钱包持有（正式） | `0x742f1c4D413d13913c80D9b6A35002C2b7D8b9Fc` | [View](https://explorer.testnet.arc.io/address/0x742f1c4D413d13913c80D9b6A35002C2b7D8b9Fc) |
 | GMCheckIn v1 (已弃用) | `0x15631A27ab630477A28d43f3096A60F79370f445` | [View](https://explorer.testnet.arc.io/address/0x15631A27ab630477A28d43f3096A60F79370f445) |
 | GMCheckIn v2 (已弃用) | `0x61CaF38cd22D8cc9567f48274f1137Cf3395cC9c` | [View](https://explorer.testnet.arc.io/address/0x61CaF38cd22D8cc9567f48274f1137Cf3395cC9c) |
-| GMCheckIn v3 (快照+女巫验证+GMPool，正式) | `0xA66Af89712660e0b6c1AACc666f74f0A4Df3BEF7` | [View](https://explorer.testnet.arc.io/address/0xA66Af89712660e0b6c1AACc666f74f0A4Df3BEF7) |
+| GMCheckIn v3 (快照+女巫验证+GMPool，已弃用) | `0xA66Af89712660e0b6c1AACc666f74f0A4Df3BEF7` | [View](https://explorer.testnet.arc.io/address/0xA66Af89712660e0b6c1AACc666f74f0A4Df3BEF7) |
+| GMCheckIn v3.1 (含partnerCheckin，正式) | `0xDb04Dd85fDbcE5b76d63230264475Fcb07c316A8` | [View](https://explorer.testnet.arc.io/address/0xDb04Dd85fDbcE5b76d63230264475Fcb07c316A8) |
+| GMPartner (合作项目模板，测试实例: GM Protocol test) | `0x353ecd9a42F908D2BE7f59572D9f8cCCAEd8Fa70` | [View](https://explorer.testnet.arc.io/address/0x353ecd9a42F908D2BE7f59572D9f8cCCAEd8Fa70) |
 | GMSoulBound (SBT 灵魂绑定徽章) | `0xB845E2f69d7D5426896B4083594B3C26D4bB8ff2` | [View](https://explorer.testnet.arc.io/address/0xB845E2f69d7D5426896B4083594B3C26D4bB8ff2) |
 | GMBuyback (回购销毁执行器) | `0x611F40BdaEfF0e247b0C454725d8e531256a070a` | [View](https://explorer.testnet.arc.io/address/0x611F40BdaEfF0e247b0C454725d8e531256a070a) |
 | GMPool v1 (已弃用) | `0x9f128829b987C970cbe7E29037A11a37E453FDC9` | [View](https://explorer.testnet.arc.io/address/0x9f128829b987C970cbe7E29037A11a37E453FDC9) |
@@ -56,3 +58,18 @@ GM Protocol is a daily onchain check-in system built on Arc Network. Users pay a
 bun install
 bun run dev
 ```
+
+
+---
+
+## Feedback boards and Swap (added 2026-11-04)
+
+- Feedback: `src/components/FeedbackBoard.tsx` (UI) + `netlify/functions/comments.mts` (API) + `netlify/lib/comments-core.ts` (logic) + `src/lib/feedback.ts` (shared message format).
+  - Zero gas: users sign an EIP-191 message; the server recovers the signer. Timestamp must be within 5 minutes; each signature is single-use.
+  - Limit: 3 comments per address per UTC day (atomic slot keys in Netlify Blobs store `gm-feedback`).
+  - Scopes: `protocol` (Protocol page) and `partner:<partner-id>` (Partners cards).
+  - Moderation: set Netlify env `COMMENTS_ADMIN_TOKEN`, then `DELETE /.netlify/functions/comments?scope=<scope>&id=<id>` with header `x-admin-token`.
+  - Needs a Netlify deploy that includes functions (`netlify.toml` sets `netlify/functions`). A static-only upload will not serve the API.
+  - Logic test: `bun run ./scripts/test-comments.ts`.
+- Swap: `src/components/SwapModal.tsx`, opened from the nav "Swap gARC" button and the Protocol page. Uses UniswapV2Router02 `0xE27d5D256B370604F1Ff060fB489c6A8E3F8A6D9` with path USDC <-> gARC.
+- Observation 2026-11-04: the LP pair `0xc0e9...8958` holds about 38.56 USDC and 3.856 gARC (not 5B). Protocol page tokenomics text still says 50B/5B LP. Needs reconciling.

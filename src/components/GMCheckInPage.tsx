@@ -9,7 +9,7 @@ import { arcTestnet } from 'viem/chains'
 import { toast } from 'sonner'
 
 // ── Contract addresses ────────────────────────────────────────────────────────
-const CHECKIN_ADDR   = '0xA66Af89712660e0b6c1AACc666f74f0A4Df3BEF7' as Address
+const CHECKIN_ADDR   = '0xDb04Dd85fDbcE5b76d63230264475Fcb07c316A8' as Address
 const POOL_ADDR      = '0xC3832c0169C1602D581cC6816414Ad05A855e713' as Address
 const USDC_ADDR      = '0x3600000000000000000000000000000000000000' as Address
 const GARC_ADDR      = '0x742f1c4D413d13913c80D9b6A35002C2b7D8b9Fc' as Address
@@ -245,11 +245,11 @@ export default function GMCheckInPage() {
   const { isLoading: checkinConfirming, isSuccess: checkinSuccess } = useWaitForTransactionReceipt({ hash: checkinTx })
 
   useEffect(() => {
-    if (approveSuccess) { refetchAllowance(); toast.success('USDC approved!') }
+    if (approveSuccess) { void refetchAllowance(); toast.success('USDC approved!') }
   }, [approveSuccess, refetchAllowance])
 
   useEffect(() => {
-    if (checkinSuccess) { refetchUser(); toast.success('GM! Check-in confirmed.') }
+    if (checkinSuccess) { void refetchUser(); toast.success('GM! Check-in confirmed.') }
   }, [checkinSuccess, refetchUser])
 
   const handleApprove = () => {
@@ -377,6 +377,22 @@ export default function GMCheckInPage() {
 
             {/* Pool stats */}
             <PoolStats />
+
+            {/* Partner check-in section */}
+            <div style={{ marginTop: 28 }}>
+              <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', color: '#6B7280', textTransform: 'uppercase', marginBottom: 12 }}>
+                Partner Check-ins
+              </div>
+              <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 16, padding: '20px', textAlign: 'center' }}>
+                <div style={{ fontSize: 13, color: '#6B7280', marginBottom: 6 }}>Partner project integrations</div>
+                <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 14px', borderRadius: 20, background: 'rgba(59,130,246,0.08)', border: '1px solid rgba(59,130,246,0.2)', color: '#93C5FD', fontSize: 12, fontWeight: 600 }}>
+                  Coming Soon
+                </div>
+                <div style={{ fontSize: 11, color: '#4B5563', marginTop: 8 }}>
+                  A partner check-in shares your main GM streak — one daily action, multiple rewards.
+                </div>
+              </div>
+            </div>
           </>
         )}
       </div>
