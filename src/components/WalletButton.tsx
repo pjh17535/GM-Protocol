@@ -64,7 +64,7 @@ export default function WalletButton({ className = '' }: { className?: string })
         onClick={() => setOpen(v => !v)}
         aria-haspopup="menu"
         aria-expanded={open}
-        className="flex items-center gap-2 pl-2.5 pr-3 py-1.5 rounded-full text-xs font-medium text-white bg-white/8 hover:bg-white/12 border border-white/10 transition-colors"
+        className="flex items-center gap-2 pl-2.5 pr-3 py-1.5 rounded-full text-xs font-medium text-white bg-white/[0.08] hover:bg-white/[0.12] border border-white/10 transition-colors"
       >
         <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
         <span className="tabular-nums">{short(address)}</span>
@@ -81,11 +81,11 @@ export default function WalletButton({ className = '' }: { className?: string })
             target="_blank"
             rel="noopener noreferrer"
             role="menuitem"
-            className="flex items-center gap-2.5 w-full px-3 py-2.5 rounded-xl text-sm text-gray-200 hover:bg-white/6 transition-colors"
+            className="flex items-center gap-2.5 w-full px-3 py-2.5 rounded-xl text-sm text-gray-200 hover:bg-white/[0.06] transition-colors"
           >
             <ExternalLink className="size-4" /> View on explorer
           </a>
-          <div className="my-1 h-px bg-white/8" />
+          <div className="my-1 h-px bg-white/[0.08]" />
           <MenuItem
             onClick={() => { disconnect(); setOpen(false) }}
             icon={<LogOut className="size-4" />}
@@ -104,7 +104,7 @@ function MenuItem({ children, icon, onClick, danger }: { children: React.ReactNo
     <button
       role="menuitem"
       onClick={onClick}
-      className={`flex items-center gap-2.5 w-full px-3 py-2.5 rounded-xl text-sm transition-colors hover:bg-white/6 ${danger ? 'text-red-400' : 'text-gray-200'}`}
+      className={`flex items-center gap-2.5 w-full px-3 py-2.5 rounded-xl text-sm transition-colors hover:bg-white/[0.06] ${danger ? 'text-red-400' : 'text-gray-200'}`}
     >
       {icon}
       {children}

@@ -44,6 +44,7 @@ const SLIPPAGE_OPTIONS = [50, 100, 300] // basis points
 const CARD = '#131A2A'
 const PANEL = '#1B2236'
 const PILL = '#2A3350'
+const LINE = 'rgba(255,255,255,0.08)'
 const PINK = '#FC72FF'
 const FONT = "'DM Sans', ui-sans-serif, system-ui, sans-serif"
 
@@ -237,8 +238,8 @@ export default function SwapModal({ onClose }: { onClose: () => void }) {
       <div
         role="dialog"
         aria-label="Swap"
-        className="w-full max-w-[460px] rounded-[28px] border border-white/8 p-2 shadow-2xl shadow-black/60 mb-6"
-        style={{ background: CARD, fontFamily: FONT }}
+        className="w-full p-2 mb-6"
+        style={{ background: CARD, fontFamily: FONT, maxWidth: 460, borderRadius: 28, border: `1px solid ${LINE}`, boxShadow: '0 24px 64px rgba(0,0,0,0.6)' }}
         onClick={e => e.stopPropagation()}
       >
         {/* Header */}
@@ -277,7 +278,7 @@ export default function SwapModal({ onClose }: { onClose: () => void }) {
         )}
 
         {/* Sell */}
-        <div className="rounded-2xl px-4 pt-3.5 pb-3 border border-transparent focus-within:border-white/15 transition-colors" style={{ background: PANEL }}>
+        <div className="swap-panel rounded-2xl px-4 pt-3.5 pb-3" style={{ background: PANEL }}>
           <p className="text-sm text-gray-400 mb-1.5">Sell</p>
           <div className="flex items-center gap-3">
             <input
@@ -288,7 +289,8 @@ export default function SwapModal({ onClose }: { onClose: () => void }) {
               onChange={e => onAmountChange(e.target.value)}
               placeholder="0"
               aria-label={`Amount of ${from.symbol} to sell`}
-              className="flex-1 min-w-0 bg-transparent text-[40px] leading-[48px] font-medium tabular-nums text-white placeholder:text-gray-600 outline-none"
+              className="swap-input"
+              style={{ flex: 1, minWidth: 0, width: '100%', background: 'transparent', border: 'none', outline: 'none', padding: 0, color: '#fff', caretColor: PINK, fontFamily: 'inherit', fontSize: 40, lineHeight: '48px', fontWeight: 500, fontVariantNumeric: 'tabular-nums' }}
             />
             <TokenBadge side={from} />
           </div>
@@ -322,7 +324,7 @@ export default function SwapModal({ onClose }: { onClose: () => void }) {
         <div className="rounded-2xl px-4 pt-3.5 pb-3 mt-1" style={{ background: PANEL }}>
           <p className="text-sm text-gray-400 mb-1.5">Buy</p>
           <div className="flex items-center gap-3">
-            <div className={`flex-1 min-w-0 truncate text-[40px] leading-[48px] font-medium tabular-nums ${amountOut !== undefined ? 'text-white' : 'text-gray-600'}`}>
+            <div className="flex-1 min-w-0 truncate" style={{ fontSize: 40, lineHeight: '48px', fontWeight: 500, fontVariantNumeric: 'tabular-nums', color: amountOut !== undefined ? '#fff' : '#4B5563' }}>
               {amountOut !== undefined ? fmtAmount(amountOut, to.decimals) : '0'}
             </div>
             <TokenBadge side={to} />
@@ -334,7 +336,7 @@ export default function SwapModal({ onClose }: { onClose: () => void }) {
 
         {/* Details */}
         {rateText && (
-          <div className="mx-1 mt-2 rounded-2xl border border-white/8">
+          <div className="mx-1 mt-2 rounded-2xl" style={{ border: `1px solid ${LINE}` }}>
             <button
               onClick={() => setShowDetails(v => !v)}
               className="w-full flex items-center justify-between px-3.5 py-3 text-sm text-gray-300 tabular-nums"
@@ -344,7 +346,7 @@ export default function SwapModal({ onClose }: { onClose: () => void }) {
               <ChevronDown className={`size-4 text-gray-500 transition-transform ${showDetails ? 'rotate-180' : ''}`} />
             </button>
             {showDetails && (
-              <div className="px-3.5 pb-3 space-y-2 text-[13px] border-t border-white/8 pt-3">
+              <div className="px-3.5 pb-3 space-y-2 text-[13px] pt-3" style={{ borderTop: `1px solid ${LINE}` }}>
                 {impactBps !== null && (
                   <Row
                     label="Price impact"
@@ -395,9 +397,10 @@ function Row({ label, value, valueClass = 'text-gray-200' }: { label: string; va
 }
 
 function Notice({ children, tone = 'info' }: { children: React.ReactNode; tone?: 'info' | 'danger' }) {
-  const cls = tone === 'danger' ? 'bg-red-500/10 text-red-300' : 'bg-white/4 text-gray-400'
+  const cls = tone === 'danger' ? 'text-red-300' : 'text-gray-400'
+  const bg = tone === 'danger' ? 'rgba(240,71,91,0.10)' : 'rgba(255,255,255,0.04)'
   return (
-    <div className={`mx-1 mt-2 flex gap-2 rounded-2xl px-3.5 py-3 text-xs leading-relaxed ${cls}`}>
+    <div className={`mx-1 mt-2 flex gap-2 rounded-2xl px-3.5 py-3 text-xs leading-relaxed ${cls}`} style={{ background: bg }}>
       <Info className="size-4 shrink-0 mt-px" />
       <p>{children}</p>
     </div>
@@ -409,7 +412,7 @@ function IconButton({ children, label, onClick, active }: { children: React.Reac
     <button
       onClick={onClick}
       aria-label={label}
-      className={`size-9 rounded-full flex items-center justify-center transition-colors ${active ? 'text-white bg-white/12' : 'text-gray-400 hover:text-white hover:bg-white/8'}`}
+      className={`size-9 rounded-full flex items-center justify-center transition-colors ${active ? 'text-white bg-white/[0.12]' : 'text-gray-400 hover:text-white hover:bg-white/[0.08]'}`}
     >
       {children}
     </button>

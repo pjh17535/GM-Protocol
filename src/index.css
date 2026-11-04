@@ -11,3 +11,16 @@ body {
   font-family: system-ui, sans-serif;
   min-height: 100dvh;
 }
+
+/* Swap panel (Uniswap-style fields) */
+.swap-panel {
+  border: 1px solid transparent;
+  transition: border-color 0.15s ease;
+}
+.swap-panel:focus-within {
+  border-color: rgba(255, 255, 255, 0.16);
+}
+.swap-input::placeholder {
+  color: #4b5563;
+  opacity: 1;
+}
