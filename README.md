@@ -1,3 +1,5 @@
+<p align="center"><img src="public/brand/gm-protocol-banner-dark.png" alt="GM Protocol" width="560" /></p>
+
 # GM Protocol
 
 **A daily check-in protocol built on Arc Network, where persistence is rewarded and every exit burns.**
