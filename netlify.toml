@@ -1,6 +1,11 @@
 [build]
-  command = "bun run build"
+  # Netlify's build image may not ship Bun, so fetch the exact version this
+  # project uses (see .bun-version) through npx.
+  command = "npx --yes bun@1.3.14 install --frozen-lockfile && npx --yes bun@1.3.14 run build"
   publish = "dist"
+
+[build.environment]
+  NODE_VERSION = "20"
 
 [functions]
   directory = "netlify/functions"
