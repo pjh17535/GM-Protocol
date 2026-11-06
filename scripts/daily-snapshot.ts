@@ -44,9 +44,12 @@ if (!keyRaw && !DRY_RUN) {
   process.exit(1)
 }
 
-const publicClient = createPublicClient({ chain: arcTestnet, transport: http(RPC_URL) })
+// The public RPC rate-limits bursts (error -32005), so retry with backoff and read sequentially.
+const transport = http(RPC_URL, { retryCount: 6, retryDelay: 1500 })
+const sleep = (ms: number) => new Promise(r => setTimeout(r, ms))
+const publicClient = createPublicClient({ chain: arcTestnet, transport })
 const account = keyRaw ? privateKeyToAccount((keyRaw.startsWith('0x') ? keyRaw : `0x${keyRaw}`) as Hex) : null
-const wallet = account ? createWalletClient({ account, chain: arcTestnet, transport: http(RPC_URL) }) : null
+const wallet = account ? createWalletClient({ account, chain: arcTestnet, transport }) : null
 
 async function main() {
   const block = await publicClient.getBlock()
@@ -64,13 +67,14 @@ async function main() {
 
   for (const t of targets) {
     const days = Array.from({ length: LOOKBACK_DAYS }, (_, i) => today - LOOKBACK_DAYS + i) // today-N .. today-1
-    const state = await Promise.all(days.map(async day => {
-      const [total, done] = await Promise.all([
-        publicClient.readContract({ address: t.address, abi: ABI, functionName: 'snapshotTotalClaimUsdc', args: [BigInt(day)] }),
-        publicClient.readContract({ address: t.address, abi: ABI, functionName: 'snapshotExecuted', args: [BigInt(day)] }),
-      ])
-      return { day, total, done }
-    }))
+    const state: { day: number; total: bigint; done: boolean }[] = []
+    for (const day of days) {
+      const total = await publicClient.readContract({ address: t.address, abi: ABI, functionName: 'snapshotTotalClaimUsdc', args: [BigInt(day)] })
+      await sleep(150)
+      const done = await publicClient.readContract({ address: t.address, abi: ABI, functionName: 'snapshotExecuted', args: [BigInt(day)] })
+      await sleep(150)
+      state.push({ day, total, done })
+    }
 
     const pending = state.filter(s => s.total > 0n && !s.done)
     console.log(`${t.name}: ${pending.length} day(s) waiting`)

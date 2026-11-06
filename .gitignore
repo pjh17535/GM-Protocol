@@ -29,3 +29,6 @@ Thumbs.db
 # Editor
 .vscode/
 .idea/
+
+# Stray nested git repo (not a submodule); keep it out of the tracked tree.
+/GM-Protocol/
