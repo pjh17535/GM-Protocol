@@ -89,3 +89,4 @@ bun run dev
 - GM page partner check-ins: `src/components/PartnerCheckins.tsx` lists partners with a contract address from `src/data/partners.ts`.
 - My GM badges: `src/components/SbtBadges.tsx` reads real tokens via `getUserTokens`, `getTokenInfo`, and the onchain `tokenURI` art.
 - Partner application form: question list in `docs/partner-application-form.md`; set `GOOGLE_FORM_URL` in `src/data/partners.ts` once the form exists.
+- SECURITY (mainnet blocker, found 2026-11-06): `GMPool.withdrawProtocol` and `withdrawPartner` are `onlyOwner` and send USDC straight to any address without a gARC buyback-burn. This contradicts the whitepaper rule that every USDC exit triggers a burn. Route these through the claim path (or a timelock) before mainnet, and keep public copy worded as a design target until then.
