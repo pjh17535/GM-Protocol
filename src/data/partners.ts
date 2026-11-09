@@ -45,7 +45,7 @@ export const PARTNERS: Partner[] = [
     contractAddress: '0x15Cd101c1093c2198FbA09031C610e51Fb4F285D',
     milestoneDays: [7, 14],
     isTestnet: true,
-    status: 'deployed',
+    status: 'active',
     approvedAt: '2026-10-28',
     note: 'Internal test — operator is dev wallet 0x1697...',
   },

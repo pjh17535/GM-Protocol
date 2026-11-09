@@ -328,7 +328,7 @@ export default function PartnersPage() {
           <h1 className="text-2xl font-bold text-white mb-2">Partner Projects</h1>
           <p className="text-gray-400 text-sm max-w-xl">
             Partner projects integrate with GM Protocol to offer their users additional daily check-in milestones.
-            Every partner check-in shares the main GM streak and triggers the same (9/8)× buyback-burn mechanism.
+            Every partner check-in shares the main GM streak and sends 10% of the check-in fee to buyback-and-burn.
           </p>
         </div>
 
