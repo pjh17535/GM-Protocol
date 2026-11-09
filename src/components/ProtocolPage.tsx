@@ -32,6 +32,14 @@ const ERC20_ABI = [
   { name: 'totalSupply', type: 'function', stateMutability: 'view', inputs: [], outputs: [{ type: 'uint256' }] },
 ] as const
 
+const fmtCompact = (n: number) => {
+  if (!Number.isFinite(n)) return '—'
+  if (n >= 1e9) return `${(n / 1e9).toFixed(2)}B`
+  if (n >= 1e6) return `${(n / 1e6).toFixed(2)}M`
+  if (n >= 1e3) return `${(n / 1e3).toFixed(2)}K`
+  return n.toFixed(2)
+}
+
 // ── Helpers ───────────────────────────────────────────────────────────────────
 const fmt6 = (v: bigint | undefined) =>
   v !== undefined ? parseFloat(formatUnits(v, 6)).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '—'
@@ -195,8 +203,8 @@ export default function ProtocolPage({ onOpenSwap }: { onOpenSwap?: () => void }
                 <p className="text-white font-mono text-sm">{lpGarc !== undefined ? lpGarc.toLocaleString('en-US', { maximumFractionDigits: 3 }) : '—'}</p>
               </div>
               <div>
-                <p className="text-gray-500 text-xs mb-1">Implied price</p>
-                <p className="text-white font-mono text-sm">{lpPrice !== undefined ? `${lpPrice.toFixed(2)} USDC` : '—'}</p>
+                <p className="text-gray-500 text-xs mb-1">Implied rate</p>
+                <p className="text-white font-mono text-sm">{lpPrice !== undefined ? `1 USDC = ${fmtCompact(1 / lpPrice)} gARC` : '—'}</p>
               </div>
             </div>
             <p className="text-gray-400 text-xs leading-relaxed">
