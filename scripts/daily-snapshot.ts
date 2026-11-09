@@ -34,7 +34,7 @@ const ABI = [
 ] as const
 
 const targets: { name: string; address: Address }[] = [
-  { name: 'GMCheckIn v3.1', address: GM_CHECKIN },
+  { name: 'GMCheckIn v3.2', address: GM_CHECKIN },
   ...PARTNERS.filter(p => p.contractAddress).map(p => ({ name: `Partner: ${p.name}`, address: p.contractAddress as Address })),
 ]
 
