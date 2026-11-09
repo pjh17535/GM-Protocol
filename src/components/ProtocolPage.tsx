@@ -51,7 +51,7 @@ const CONTRACTS = [
   { name: 'GMPool v2',           addr: '0xC3832c0169C1602D581cC6816414Ad05A855e713', note: '80/10/5/5 USDC split, gARC claim pool' },
   { name: 'GMBuyback',           addr: '0x611F40BdaEfF0e247b0C454725d8e531256a070a', note: 'Uniswap V2 buyback-and-burn, 3-layer trigger' },
   { name: 'GMSoulBound (SBT)',   addr: '0xB845E2f69d7D5426896B4083594B3C26D4bB8ff2', note: 'Non-transferable identity badges, 5 on-chain SVG tiers' },
-  { name: 'USDC/gARC LP Pair',   addr: '0xc0e9695ab4e41f4477074845046b3d152c4c8958', note: 'Uniswap V2 pair, 38.56 USDC + 5B gARC' },
+  { name: 'USDC/gARC LP Pair',   addr: '0xc0e9695ab4e41f4477074845046b3d152c4c8958', note: 'Uniswap V2 pair (live reserves are shown above)' },
 ]
 
 const EXPLORER = 'https://explorer.testnet.arc.io/address/'
@@ -166,7 +166,7 @@ export default function ProtocolPage({ onOpenSwap }: { onOpenSwap?: () => void }
               { label: 'Initial burn (Day 1)',   value: '210,000,000 gARC',   note: 'Irreversible, verified onchain' },
               { label: 'Supply after burn',      value: '9,790,000,000 gARC', note: '4.79B Claim pool + 5B initial liquidity' },
               { label: 'Claim pool', value: '4,790,000,000 gARC', note: 'Held in GMPool v2, released through milestones' },
-              { label: 'Initial liquidity', value: '5,000,000,000 gARC', note: '38.56 USDC + 5B gARC on Uniswap V2 (live below)' },
+              { label: 'Initial liquidity', value: '5,000,000,000 gARC', note: 'Seeded with 38.56 USDC + 5B gARC on Uniswap V2. Live reserves are shown below' },
               { label: 'Terminal floor',         value: '210,000,000 gARC',   note: 'What remains in liquidity once the Claim pool is fully used' },
               { label: 'Claim mechanism',        value: '(9/8)× buyback-burn', note: 'Every USDC out triggers an extra 12.5% burn' },
             ].map(r => (
@@ -200,9 +200,8 @@ export default function ProtocolPage({ onOpenSwap }: { onOpenSwap?: () => void }
               </div>
             </div>
             <p className="text-gray-400 text-xs leading-relaxed">
-              The pool holds 5,000,000,000 gARC against a small amount of testnet USDC, so the implied price is
-              tiny and any trade with meaningful USDC moves it sharply. It is not a market price.
-            </p>
+              The testnet pool was seeded with 38.56 USDC and 5,000,000,000 gARC, and anyone can trade against it,
+              so its reserves and implied price move with every swap. It is a small test pool, not a market price.</p>
           </div>
         </section>
 
