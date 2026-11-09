@@ -22,7 +22,7 @@ import { privateKeyToAccount } from 'viem/accounts'
 import { arcTestnet } from 'viem/chains'
 import { PARTNERS } from '../src/data/partners'
 
-const GM_CHECKIN: Address = '0xDb04Dd85fDbcE5b76d63230264475Fcb07c316A8'
+const GM_CHECKIN: Address = '0xBBf46cE9E2e3bA2819c113Ef05857023d68AfcAf'
 const RPC_URL = process.env.RPC_URL ?? 'https://rpc.testnet.arc.io'
 const LOOKBACK_DAYS = Number(process.env.LOOKBACK_DAYS ?? 14)
 const DRY_RUN = process.argv.includes('--dry-run')

@@ -25,8 +25,10 @@ contract MockGMPool {
 
     // ── IGMPool interface ─────────────────────────────────────────────────
 
-    function receiveCheckinFee(uint256 /*amount*/) external {
+    function receiveCheckinFee(uint256 amount) external {
         if (revertOnReceive) revert("MockGMPool: revert");
+        // Like the real pool: pull the fee from the caller (GMCheckIn approved it).
+        MockERC20(usdcAddr).transferFrom(msg.sender, address(this), amount);
     }
 
     function withdrawReward(uint256 amount, address to) external {

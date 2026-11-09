@@ -2,6 +2,7 @@
 pragma solidity ^0.8.20;
 
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import {Ownable2Step} from "@openzeppelin/contracts/access/Ownable2Step.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
@@ -12,14 +13,13 @@ interface IGMCheckIn {
 }
 
 interface IGMBuyback {
-    function executeBuyback() external;
 }
 
 interface IGMMainPool {
     function injectFunds(uint256 amount) external;
 }
 
-contract GMPartner is Ownable, ReentrancyGuard {
+contract GMPartner is Ownable2Step, ReentrancyGuard {
     using SafeERC20 for IERC20;
 
     IERC20 public constant USDC = IERC20(0x3600000000000000000000000000000000000000);
@@ -75,6 +75,8 @@ contract GMPartner is Ownable, ReentrancyGuard {
     // Milestone tracking
     mapping(address => mapping(uint8 => uint256)) public pendingClaimDay;
     mapping(address => mapping(uint8 => uint256)) public pendingClaimUsdc;
+    mapping(address => mapping(uint8 => uint256)) private _pendingClaimReservedUsdc;
+    uint256 public outstandingReservedUsdc;
     mapping(address => mapping(uint8 => uint256)) public milestoneLastClaimedDay;
     mapping(uint256 => bool) public snapshotExecuted;
     mapping(uint256 => uint256) public snapshotTotalClaimUsdc;
@@ -84,6 +86,7 @@ contract GMPartner is Ownable, ReentrancyGuard {
     uint256 public totalCheckins;
     uint256 public totalClaims;
 
+    error ZeroAddress();
     error NotOperator();
     error NotOwner();
     error AlreadyCheckedInToday();
@@ -102,6 +105,7 @@ contract GMPartner is Ownable, ReentrancyGuard {
     error SnapshotNotExecuted(uint256 dayIndex);
     error SnapshotAlreadyExecuted(uint256 dayIndex);
     error NoClaimsToSnapshot(uint256 dayIndex);
+    error DayNotClosed(uint256 dayIndex);
 
     event PartnerCheckedIn(address indexed user, uint256 dayIndex, uint256 streak);
     event FundsInjected(
@@ -140,6 +144,7 @@ contract GMPartner is Ownable, ReentrancyGuard {
         uint256[4] memory _milestoneDays,
         bool _isTestnet
     ) Ownable(_owner) {
+        if (_gmCheckin == address(0) || _gmBuyback == address(0) || _gmMainPool == address(0)) revert ZeroAddress();
         if (_milestoneCount == 0 || _milestoneCount > 4) revert InvalidMilestoneCount(_milestoneCount);
 
         uint256 previous;
@@ -198,6 +203,10 @@ contract GMPartner is Ownable, ReentrancyGuard {
             emit ContractActivated(totalInjected, block.timestamp);
         }
 
+        if (buybackShare > 0) {
+            USDC.safeTransfer(address(gmBuyback), buybackShare);
+        }
+
         emit FundsInjected(msg.sender, amount, rewardShare, mainGMShare, buybackShare);
     }
 
@@ -236,6 +245,10 @@ contract GMPartner is Ownable, ReentrancyGuard {
             USDC.forceApprove(address(gmMainPool), 0);
         }
 
+        if (buybackShare > 0) {
+            USDC.safeTransfer(address(gmBuyback), buybackShare);
+        }
+
         emit PartnerCheckedIn(msg.sender, dayIndex, user.currentStreak);
         emit FundsInjected(msg.sender, fee, rewardShare, mainGMShare, buybackShare);
     }
@@ -272,12 +285,13 @@ contract GMPartner is Ownable, ReentrancyGuard {
 
         uint256 usdcToPull = ((claimUsdc * BUYBACK_TOTAL_PARTS) + (BUYBACK_USER_PARTS - 1)) / BUYBACK_USER_PARTS;
 
-        uint256 reserved = snapshotReservedUsdc[dayIndex];
-        uint256 available = rewardPoolBalance > reserved ? rewardPoolBalance - reserved : 0;
+        uint256 available = rewardPoolBalance > outstandingReservedUsdc ? rewardPoolBalance - outstandingReservedUsdc : 0;
         if (usdcToPull > available) revert InsufficientRewardPool(usdcToPull, available);
 
         pendingClaimDay[msg.sender][tier] = dayIndex;
         pendingClaimUsdc[msg.sender][tier] = claimUsdc;
+        _pendingClaimReservedUsdc[msg.sender][tier] = usdcToPull;
+        outstandingReservedUsdc += usdcToPull;
         snapshotTotalClaimUsdc[dayIndex] += usdcToPull;
         snapshotReservedUsdc[dayIndex] += usdcToPull;
 
@@ -285,14 +299,12 @@ contract GMPartner is Ownable, ReentrancyGuard {
     }
 
     function executeSnapshot(uint256 dayIndex) external nonReentrant {
+        if (snapshotExecuted[dayIndex]) revert SnapshotAlreadyExecuted(dayIndex);
         uint256 totalUsdc = snapshotTotalClaimUsdc[dayIndex];
         if (totalUsdc == 0) revert NoClaimsToSnapshot(dayIndex);
-        if (snapshotExecuted[dayIndex]) revert SnapshotAlreadyExecuted(dayIndex);
-        if (dayIndex > _currentDayIndex()) revert SnapshotNotExecuted(dayIndex);
+        if (dayIndex >= _currentDayIndex()) revert DayNotClosed(dayIndex);
 
         snapshotExecuted[dayIndex] = true;
-
-        try gmBuyback.executeBuyback() {} catch {}
 
         emit SnapshotExecuted(dayIndex, totalUsdc, block.timestamp);
     }
@@ -308,6 +320,8 @@ contract GMPartner is Ownable, ReentrancyGuard {
         uint256 claimUsdc = pendingClaimUsdc[msg.sender][tier];
         if (claimUsdc == 0) revert ZeroClaimAmount();
 
+        outstandingReservedUsdc -= _pendingClaimReservedUsdc[msg.sender][tier];
+        delete _pendingClaimReservedUsdc[msg.sender][tier];
         pendingClaimDay[msg.sender][tier] = 0;
         pendingClaimUsdc[msg.sender][tier] = 0;
 

@@ -3,6 +3,8 @@ pragma solidity ^0.8.20;
 
 import {GMPartnerTestBase} from "./GMPartner.Base.t.sol";
 import {GMPartner}         from "../GMPartner.sol";
+import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import {Ownable2Step} from "@openzeppelin/contracts/access/Ownable2Step.sol";
 
 /// @dev Constructor validation + isExpired tests.
 contract GMPartnerDeployTest is GMPartnerTestBase {
@@ -39,6 +41,91 @@ contract GMPartnerDeployTest is GMPartnerTestBase {
     }
 
     function test_Deploy_OwnerSet() public view {
+        assertEq(partner.owner(), owner);
+    }
+
+    // ── 1b. zero protocol addresses revert ZeroAddress ────────────────────
+
+    function _deployWith(address checkin_, address buyback_, address mainPool_) internal returns (GMPartner) {
+        uint256[4] memory mDays;
+        mDays[0] = MILESTONE_0;
+        mDays[1] = MILESTONE_1;
+        return new GMPartner(
+            owner, operator, checkin_, buyback_, mainPool_,
+            "X", "y", MILESTONE_COUNT, mDays, true
+        );
+    }
+
+    function test_Deploy_Reverts_ZeroGmCheckin() public {
+        vm.expectRevert(GMPartner.ZeroAddress.selector);
+        _deployWith(address(0), address(mockBuyback), address(mockMainPool));
+    }
+
+    function test_Deploy_Reverts_ZeroGmBuyback() public {
+        vm.expectRevert(GMPartner.ZeroAddress.selector);
+        _deployWith(address(mockCheckin), address(0), address(mockMainPool));
+    }
+
+    function test_Deploy_Reverts_ZeroGmMainPool() public {
+        vm.expectRevert(GMPartner.ZeroAddress.selector);
+        _deployWith(address(mockCheckin), address(mockBuyback), address(0));
+    }
+
+    function test_Deploy_NonZeroProtocolAddressesStored() public {
+        GMPartner p = _deployWith(address(mockCheckin), address(mockBuyback), address(mockMainPool));
+        assertEq(address(p.gmCheckin()), address(mockCheckin));
+        assertEq(address(p.gmBuyback()), address(mockBuyback));
+        assertEq(address(p.gmMainPool()), address(mockMainPool));
+    }
+
+    // ── 1c. Ownable2Step ──────────────────────────────────────────────────
+
+    function test_TransferOwnership_OnlySetsPendingOwner() public {
+        vm.expectEmit(true, true, false, false, address(partner));
+        emit Ownable2Step.OwnershipTransferStarted(owner, alice);
+        vm.prank(owner);
+        partner.transferOwnership(alice);
+        assertEq(partner.owner(), owner, "owner unchanged");
+        assertEq(partner.pendingOwner(), alice);
+
+        // pending owner has no owner privileges yet
+        vm.prank(alice);
+        vm.expectRevert(GMPartner.NotOwner.selector);
+        partner.setOperator(alice);
+    }
+
+    function test_TransferOwnership_NonOwnerReverts() public {
+        vm.prank(alice);
+        vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, alice));
+        partner.transferOwnership(alice);
+    }
+
+    function test_AcceptOwnership_ByPendingOwnerCompletesTransfer() public {
+        vm.prank(owner);
+        partner.transferOwnership(alice);
+
+        vm.expectEmit(true, true, false, false, address(partner));
+        emit Ownable.OwnershipTransferred(owner, alice);
+        vm.prank(alice);
+        partner.acceptOwnership();
+
+        assertEq(partner.owner(), alice);
+        assertEq(partner.pendingOwner(), address(0));
+
+        vm.prank(owner);
+        vm.expectRevert(GMPartner.NotOwner.selector);
+        partner.setOperator(owner);
+        vm.prank(alice);
+        partner.setOperator(bob);
+        assertEq(partner.operator(), bob);
+    }
+
+    function test_AcceptOwnership_ByNonPendingReverts() public {
+        vm.prank(owner);
+        partner.transferOwnership(alice);
+        vm.prank(bob);
+        vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, bob));
+        partner.acceptOwnership();
         assertEq(partner.owner(), owner);
     }
 

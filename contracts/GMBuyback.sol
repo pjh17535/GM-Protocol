@@ -2,6 +2,7 @@
 pragma solidity ^0.8.20;
 
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import {Ownable2Step} from "@openzeppelin/contracts/access/Ownable2Step.sol";
 import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -23,7 +24,7 @@ interface IGARCBurn {
     function burn(uint256 amount) external;
 }
 
-contract GMBuyback is Ownable, Pausable, ReentrancyGuard {
+contract GMBuyback is Ownable2Step, Pausable, ReentrancyGuard {
     using SafeERC20 for IERC20;
 
     IERC20 public constant USDC = IERC20(0x3600000000000000000000000000000000000000);
@@ -34,7 +35,7 @@ contract GMBuyback is Ownable, Pausable, ReentrancyGuard {
     uint256 public constant SLIPPAGE_NUMERATOR = 995;
     uint256 public constant SLIPPAGE_DENOMINATOR = 1000;
 
-    address public reserveVault;
+    mapping(address => bool) public authorizedCallers;
     uint256 public minBuybackAmount;
     uint256 public cooldownPeriod;
     uint256 public lastBuybackTime;
@@ -52,10 +53,12 @@ contract GMBuyback is Ownable, Pausable, ReentrancyGuard {
     error InvalidMaxSingleBuyback();
     error InvalidIncentiveParams(uint256 baseBps, uint256 maxBps);
     error IncentiveParamsTooHigh();
-    error InvalidReserveVault();
+    error NotAuthorized();
+    error ZeroAddress();
     error InvalidSwapQuote();
     error ZeroSwapAmount();
     error ZeroBurnAmount();
+    error RenounceDisabled();
 
     event BuybackExecuted(
         address indexed caller,
@@ -65,13 +68,11 @@ contract GMBuyback is Ownable, Pausable, ReentrancyGuard {
         uint256 garcBurned,
         uint256 timestamp
     );
-    event ReserveVaultUpdated(address indexed newVault);
+    event AuthorizedCallerUpdated(address indexed caller, bool allowed);
     event CooldownUpdated(uint256 newCooldown);
     event IncentiveParamsUpdated(uint256 baseBps, uint256 maxBps);
 
-    constructor(address initialOwner, address _reserveVault) Ownable(initialOwner) {
-        reserveVault = _reserveVault;
-
+    constructor(address initialOwner) Ownable(initialOwner) {
         minBuybackAmount = 1e6; // 1 USDC (6 decimals)
         cooldownPeriod = 1800; // 30 minutes
         maxSingleBuyback = 10e6; // 10 USDC (6 decimals)
@@ -81,14 +82,12 @@ contract GMBuyback is Ownable, Pausable, ReentrancyGuard {
     }
 
     function executeBuyback() external nonReentrant whenNotPaused {
-        if (reserveVault == address(0)) revert InvalidReserveVault();
-
         uint256 nextAllowedTime = lastBuybackTime + cooldownPeriod;
         if (block.timestamp < nextAllowedTime) {
             revert CooldownActive(block.timestamp, nextAllowedTime);
         }
 
-        uint256 reserveBalance = USDC.balanceOf(reserveVault);
+        uint256 reserveBalance = USDC.balanceOf(address(this));
         uint256 buybackAmount = reserveBalance < maxSingleBuyback ? reserveBalance : maxSingleBuyback;
 
         if (buybackAmount < minBuybackAmount) {
@@ -101,8 +100,6 @@ contract GMBuyback is Ownable, Pausable, ReentrancyGuard {
             callerIncentive = (buybackAmount * incentiveBps) / BPS_DENOMINATOR;
         }
 
-        USDC.safeTransferFrom(reserveVault, address(this), buybackAmount);
-
         if (callerIncentive > 0) {
             USDC.safeTransfer(msg.sender, callerIncentive);
         }
@@ -110,33 +107,7 @@ contract GMBuyback is Ownable, Pausable, ReentrancyGuard {
         uint256 swapAmount = buybackAmount - callerIncentive;
         if (swapAmount == 0) revert ZeroSwapAmount();
 
-        // Randomized swap sizing was considered for MEV resistance; per specification, full swapAmount is used to maximize burn.
-        address[] memory path = new address[](2);
-        path[0] = address(USDC);
-        path[1] = address(GARC);
-
-        uint256[] memory quote = UNISWAP_V2_ROUTER.getAmountsOut(swapAmount, path);
-        uint256 expectedOut = quote[quote.length - 1];
-        /// @dev Testnet: 0.5% slippage accepted. Mainnet: replace with TWAP-based amountOutMin or private orderflow to prevent sandwich attacks.
-        uint256 amountOutMin = (expectedOut * SLIPPAGE_NUMERATOR) / SLIPPAGE_DENOMINATOR;
-
-        if (amountOutMin == 0) revert InvalidSwapQuote();
-
-        USDC.forceApprove(address(UNISWAP_V2_ROUTER), swapAmount);
-
-        uint256 garcBefore = GARC.balanceOf(address(this));
-        UNISWAP_V2_ROUTER.swapExactTokensForTokens(
-            swapAmount,
-            amountOutMin,
-            path,
-            address(this),
-            block.timestamp + 300
-        );
-
-        uint256 garcReceived = GARC.balanceOf(address(this)) - garcBefore;
-        if (garcReceived == 0) revert ZeroBurnAmount();
-
-        IGARCBurn(address(GARC)).burn(garcReceived);
+        uint256 garcReceived = _swapAndBurn(swapAmount);
 
         lastBuybackTime = block.timestamp;
         totalUsdcUsed += buybackAmount;
@@ -146,9 +117,25 @@ contract GMBuyback is Ownable, Pausable, ReentrancyGuard {
         emit BuybackExecuted(msg.sender, buybackAmount, callerIncentive, swapAmount, garcReceived, block.timestamp);
     }
 
-    function setReserveVault(address newVault) external onlyOwner {
-        reserveVault = newVault;
-        emit ReserveVaultUpdated(newVault);
+    function buybackAndBurn(uint256 usdcAmount) external nonReentrant whenNotPaused returns (uint256 garcBurned) {
+        if (!authorizedCallers[msg.sender]) revert NotAuthorized();
+        if (usdcAmount == 0) revert ZeroSwapAmount();
+
+        USDC.safeTransferFrom(msg.sender, address(this), usdcAmount);
+        uint256 garcReceived = _swapAndBurn(usdcAmount);
+
+        totalUsdcUsed += usdcAmount;
+        totalGarcBurned += garcReceived;
+        triggerCount += 1;
+
+        emit BuybackExecuted(msg.sender, usdcAmount, 0, usdcAmount, garcReceived, block.timestamp);
+        return garcReceived;
+    }
+
+    function setAuthorizedCaller(address caller, bool allowed) external onlyOwner {
+        if (caller == address(0)) revert ZeroAddress();
+        authorizedCallers[caller] = allowed;
+        emit AuthorizedCallerUpdated(caller, allowed);
     }
 
     function setMinBuybackAmount(uint256 newMinBuybackAmount) external onlyOwner {
@@ -186,12 +173,17 @@ contract GMBuyback is Ownable, Pausable, ReentrancyGuard {
     }
 
     function canExecute() external view returns (bool) {
-        if (reserveVault == address(0)) return false;
+        if (paused()) return false;
         if (block.timestamp < lastBuybackTime + cooldownPeriod) return false;
 
-        uint256 reserveBalance = USDC.balanceOf(reserveVault);
+        uint256 reserveBalance = USDC.balanceOf(address(this));
         uint256 buybackAmount = reserveBalance < maxSingleBuyback ? reserveBalance : maxSingleBuyback;
         return buybackAmount >= minBuybackAmount;
+    }
+
+    /// @dev Before mainnet, ownership must be handed to a multisig or timelock via transferOwnership and acceptOwnership.
+    function renounceOwnership() public view override onlyOwner {
+        revert RenounceDisabled();
     }
 
     function pause() external onlyOwner {
@@ -200,6 +192,36 @@ contract GMBuyback is Ownable, Pausable, ReentrancyGuard {
 
     function unpause() external onlyOwner {
         _unpause();
+    }
+
+    function _swapAndBurn(uint256 swapAmount) internal returns (uint256 garcReceived) {
+        // Randomized swap sizing was considered for MEV resistance; per specification, full swapAmount is used to maximize burn.
+        address[] memory path = new address[](2);
+        path[0] = address(USDC);
+        path[1] = address(GARC);
+
+        uint256[] memory quote = UNISWAP_V2_ROUTER.getAmountsOut(swapAmount, path);
+        uint256 expectedOut = quote[quote.length - 1];
+        /// @dev Testnet: 0.5% slippage accepted. Mainnet: replace with TWAP-based amountOutMin or private orderflow to prevent sandwich attacks.
+        uint256 amountOutMin = (expectedOut * SLIPPAGE_NUMERATOR) / SLIPPAGE_DENOMINATOR;
+
+        if (amountOutMin == 0) revert InvalidSwapQuote();
+
+        USDC.forceApprove(address(UNISWAP_V2_ROUTER), swapAmount);
+
+        uint256 garcBefore = GARC.balanceOf(address(this));
+        UNISWAP_V2_ROUTER.swapExactTokensForTokens(
+            swapAmount,
+            amountOutMin,
+            path,
+            address(this),
+            block.timestamp + 300
+        );
+
+        garcReceived = GARC.balanceOf(address(this)) - garcBefore;
+        if (garcReceived == 0) revert ZeroBurnAmount();
+
+        IGARCBurn(address(GARC)).burn(garcReceived);
     }
 
     function _getCurrentIncentiveBps() internal view returns (uint256) {

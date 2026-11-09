@@ -142,7 +142,7 @@ contract GMCheckInVerifyTest is GMCheckInTestBase {
     function test_CompleteVerification_CannotReplayOnDifferentContract() public {
         uint256 deadline = block.timestamp + 3_600;
         // Deploy a second GMCheckIn instance that uses the same signer.
-        GMCheckIn gm2 = new GMCheckIn(owner, address(gmPool), address(gmBuyback));
+        GMCheckIn gm2 = new GMCheckIn(owner, address(gmPool), address(gmBuyback), address(pair));
         vm.prank(owner);
         gm2.setSigner(signerAddr);
 
@@ -281,17 +281,24 @@ contract GMCheckInVerifyTest is GMCheckInTestBase {
 
     function test_Constructor_RevertsZeroPool() public {
         vm.expectRevert(GMCheckIn.ZeroAddress.selector);
-        new GMCheckIn(owner, address(0), address(gmBuyback));
+        new GMCheckIn(owner, address(0), address(gmBuyback), address(pair));
     }
 
     function test_Constructor_RevertsZeroBuyback() public {
         vm.expectRevert(GMCheckIn.ZeroAddress.selector);
-        new GMCheckIn(owner, address(gmPool), address(0));
+        new GMCheckIn(owner, address(gmPool), address(0), address(pair));
+    }
+
+    function test_Constructor_RevertsZeroLpPair() public {
+        vm.expectRevert(GMCheckIn.ZeroAddress.selector);
+        new GMCheckIn(owner, address(gmPool), address(gmBuyback), address(0));
     }
 
     function test_Constructor_SetsInitialState() public view {
         assertEq(address(gm.gmPool()), address(gmPool));
         assertEq(address(gm.gmBuyback()), address(gmBuyback));
+        assertEq(gm.lpPair(), address(pair));
+        assertEq(gm.outstandingReservedUsdc(), 0);
         assertEq(gm.checkinFee(), 100_000);
         assertFalse(gm.verificationEnabled());
         // signer was changed to signerAddr in setUp; just check it's not zero

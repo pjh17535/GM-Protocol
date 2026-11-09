@@ -6,6 +6,7 @@ import {GMCheckIn} from "../GMCheckIn.sol";
 import {MockERC20} from "../test-helpers/MockERC20.sol";
 import {MockGMPool} from "../test-helpers/MockGMPool.sol";
 import {MockGMBuyback} from "../test-helpers/MockGMBuyback.sol";
+import {MockUniswapV2Pair} from "../test-helpers/MockUniswapV2Pair.sol";
 
 /// @dev Shared fixtures for every GMCheckIn v3 test category.
 abstract contract GMCheckInTestBase is Test {
@@ -36,6 +37,12 @@ abstract contract GMCheckInTestBase is Test {
 
     uint8 internal constant POOL_REWARD = 0;
 
+    // ── LP pair fixture: 1 USDC (1e6) == 2_000 gARC (2_000e18) ─────────────
+    uint112 internal constant RES_USDC = 1_000_000e6;               // 1e12
+    uint112 internal constant RES_GARC = 2_000_000_000e18;          // 2e27
+    /// gARC base units per 1 USDC base unit at the fixture price.
+    uint256 internal constant GARC_PER_USDC_UNIT = 2e15;
+
     // ── Fee ───────────────────────────────────────────────────────────────
     uint256 internal constant FEE = 100_000; // 0.1 USDC (6 decimals)
 
@@ -53,6 +60,7 @@ abstract contract GMCheckInTestBase is Test {
     MockERC20     internal garc;
     MockGMPool    internal gmPool;
     MockGMBuyback internal gmBuyback;
+    MockUniswapV2Pair internal pair;
     GMCheckIn     internal gm;
 
     function setUp() public virtual {
@@ -71,9 +79,13 @@ abstract contract GMCheckInTestBase is Test {
         // 3. Deploy mocks for GMPool and GMBuyback.
         gmPool    = new MockGMPool(USDC_ADDR, GARC_ADDR);
         gmBuyback = new MockGMBuyback();
+        gmBuyback.setUsdc(USDC_ADDR);
+
+        // 3b. LP pair (USDC = token0) used by gArcForUsdc.
+        pair = new MockUniswapV2Pair(USDC_ADDR, GARC_ADDR, RES_USDC, RES_GARC);
 
         // 4. Deploy contract under test.
-        gm = new GMCheckIn(owner, address(gmPool), address(gmBuyback));
+        gm = new GMCheckIn(owner, address(gmPool), address(gmBuyback), address(pair));
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────
@@ -123,8 +135,20 @@ abstract contract GMCheckInTestBase is Test {
         gm.queueMilestoneClaim(tier);
     }
 
+    /// Warp to the first second of the day after `dayIndex` so the day is closed.
+    function _closeDay(uint256 dayIndex) internal {
+        vm.warp((dayIndex + 1) * 86_400);
+    }
+
+    /// Close `dayIndex` then execute its snapshot.
     function _executeSnapshot(uint256 dayIndex) internal {
+        _closeDay(dayIndex);
         gm.executeSnapshot(dayIndex);
+    }
+
+    /// Expected gARC for a USDC amount at the fixture price (independent of the contract).
+    function _gArcFor(uint256 usdcAmount) internal pure returns (uint256) {
+        return usdcAmount * GARC_PER_USDC_UNIT;
     }
 
     function _claimMilestone(address user, uint8 tier) internal {

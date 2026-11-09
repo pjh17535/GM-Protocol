@@ -10,7 +10,7 @@ import { toast } from 'sonner'
 import PartnerCheckins from './PartnerCheckins'
 
 // ── Contract addresses ────────────────────────────────────────────────────────
-const CHECKIN_ADDR   = '0xDb04Dd85fDbcE5b76d63230264475Fcb07c316A8' as Address
+const CHECKIN_ADDR   = '0xBBf46cE9E2e3bA2819c113Ef05857023d68AfcAf' as Address
 const POOL_ADDR      = '0xC3832c0169C1602D581cC6816414Ad05A855e713' as Address
 const USDC_ADDR      = '0x3600000000000000000000000000000000000000' as Address
 const GARC_ADDR      = '0x742f1c4D413d13913c80D9b6A35002C2b7D8b9Fc' as Address

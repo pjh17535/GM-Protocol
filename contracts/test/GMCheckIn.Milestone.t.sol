@@ -236,7 +236,7 @@ contract GMCheckInMilestoneTest is GMCheckInTestBase {
         _queueMilestone(alice, BRONZE);
         uint256 day = gm.pendingClaimDay(alice, BRONZE);
 
-        gm.executeSnapshot(day);
+        _executeSnapshot(day);
 
         vm.expectRevert(
             abi.encodeWithSelector(GMCheckIn.SnapshotAlreadyExecuted.selector, day)
@@ -256,38 +256,26 @@ contract GMCheckInMilestoneTest is GMCheckInTestBase {
         uint256 day = gm.pendingClaimDay(alice, BRONZE);
 
         assertFalse(gm.snapshotExecuted(day));
-        gm.executeSnapshot(day);
+        _executeSnapshot(day);
         assertTrue(gm.snapshotExecuted(day));
     }
 
-    // 19. Calls gmPool.withdrawReward (via mock, funds are minted to contract)
-    function test_Snapshot_WithdrawsRewardFromPool() public {
+    // 19. Snapshot withdraws totalUsdc from the pool and forwards ALL of it to the
+    //     buyback (nothing left in GMCheckIn).
+    function test_Snapshot_ForwardsWithdrawnUsdcToBuyback() public {
         _buildStreak(alice, BRONZE_DAYS);
-        uint256 poolBal = 2_000_000e6;
-        _seedPool(poolBal);
+        _seedPool(2_000_000e6);
 
         _queueMilestone(alice, BRONZE);
         uint256 day = gm.pendingClaimDay(alice, BRONZE);
         uint256 totalUsdc = gm.snapshotTotalClaimUsdc(day);
 
-        uint256 contractUsdcBefore = usdc.balanceOf(address(gm));
-        gm.executeSnapshot(day);
-        // MockGMPool.withdrawReward mints USDC directly to the contract
-        assertEq(usdc.balanceOf(address(gm)), contractUsdcBefore + totalUsdc);
-    }
-
-    // 20. Buyback try/catch — if executeBuyback reverts, snapshot still succeeds
-    function test_Snapshot_SucceedsEvenIfBuybackReverts() public {
-        gmBuyback.setShouldRevert(true);
-
-        _buildStreak(alice, BRONZE_DAYS);
-        _seedPool(2_000_000e6);
-        _queueMilestone(alice, BRONZE);
-        uint256 day = gm.pendingClaimDay(alice, BRONZE);
-
-        // Should not revert even though buyback will throw
-        gm.executeSnapshot(day);
-        assertTrue(gm.snapshotExecuted(day));
+        _executeSnapshot(day);
+        assertEq(usdc.balanceOf(address(gm)), 0, "no USDC left in GMCheckIn");
+        assertEq(usdc.balanceOf(address(gmBuyback)), totalUsdc, "buyback received totalUsdc");
+        assertEq(gmBuyback.lastBuybackAmount(), totalUsdc);
+        assertEq(gmBuyback.lastBuybackCaller(), address(gm));
+        assertEq(usdc.allowance(address(gm), address(gmBuyback)), 0, "approval reset");
     }
 
     // Emits SnapshotExecuted
@@ -299,6 +287,7 @@ contract GMCheckInMilestoneTest is GMCheckInTestBase {
         uint256 day = gm.pendingClaimDay(alice, BRONZE);
         uint256 totalUsdc = gm.snapshotTotalClaimUsdc(day);
 
+        _closeDay(day);
         vm.expectEmit(true, false, false, true, address(gm));
         emit GMCheckIn.SnapshotExecuted(day, totalUsdc, block.timestamp);
         gm.executeSnapshot(day);
@@ -345,7 +334,7 @@ contract GMCheckInMilestoneTest is GMCheckInTestBase {
         _seedPool(2_000_000e6);
         _queueMilestone(alice, BRONZE);
         uint256 day = gm.pendingClaimDay(alice, BRONZE);
-        gm.executeSnapshot(day);
+        _executeSnapshot(day);
         _claimMilestone(alice, BRONZE);
 
         assertEq(gm.pendingClaimDay(alice, BRONZE), 0);
@@ -360,11 +349,11 @@ contract GMCheckInMilestoneTest is GMCheckInTestBase {
         _queueMilestone(alice, BRONZE);
         uint256 day = gm.pendingClaimDay(alice, BRONZE);
         uint256 claimUsdc = gm.pendingClaimUsdc(alice, BRONZE);
-        gm.executeSnapshot(day);
+        _executeSnapshot(day);
 
         uint256 gArcBefore = garc.balanceOf(alice);
         _claimMilestone(alice, BRONZE);
-        assertEq(garc.balanceOf(alice), gArcBefore + claimUsdc);
+        assertEq(garc.balanceOf(alice), gArcBefore + _gArcFor(claimUsdc));
     }
 
     // 26. Updates milestoneLastClaimedDay, totalMilestoneClaims, totals
@@ -375,13 +364,13 @@ contract GMCheckInMilestoneTest is GMCheckInTestBase {
         _queueMilestone(alice, BRONZE);
         uint256 day = gm.pendingClaimDay(alice, BRONZE);
         uint256 claimUsdc = gm.pendingClaimUsdc(alice, BRONZE);
-        gm.executeSnapshot(day);
+        _executeSnapshot(day);
         _claimMilestone(alice, BRONZE);
 
         assertEq(gm.milestoneLastClaimedDay(alice, BRONZE), day);
         assertEq(gm.totalMilestoneClaims(), 1);
         assertEq(gm.totalUsdcClaimed(), claimUsdc);
-        assertEq(gm.totalGArcDistributed(), claimUsdc);
+        assertEq(gm.totalGArcDistributed(), _gArcFor(claimUsdc));
     }
 
     // 27. Emits MilestoneClaimed
@@ -392,10 +381,10 @@ contract GMCheckInMilestoneTest is GMCheckInTestBase {
         _queueMilestone(alice, BRONZE);
         uint256 day = gm.pendingClaimDay(alice, BRONZE);
         uint256 claimUsdc = gm.pendingClaimUsdc(alice, BRONZE);
-        gm.executeSnapshot(day);
+        _executeSnapshot(day);
 
         vm.expectEmit(true, false, false, true, address(gm));
-        emit GMCheckIn.MilestoneClaimed(alice, BRONZE, claimUsdc, claimUsdc, day);
+        emit GMCheckIn.MilestoneClaimed(alice, BRONZE, claimUsdc, _gArcFor(claimUsdc), day);
 
         _claimMilestone(alice, BRONZE);
     }
@@ -406,7 +395,7 @@ contract GMCheckInMilestoneTest is GMCheckInTestBase {
         _seedPool(2_000_000e6);
         _queueMilestone(alice, BRONZE);
         uint256 day = gm.pendingClaimDay(alice, BRONZE);
-        gm.executeSnapshot(day);
+        _executeSnapshot(day);
 
         vm.prank(owner);
         gm.pause();
@@ -449,7 +438,7 @@ contract GMCheckInMilestoneTest is GMCheckInTestBase {
         assertGt(day, 0);
 
         // Execute snapshot.
-        gm.executeSnapshot(day);
+        _executeSnapshot(day);
         assertTrue(gm.snapshotExecuted(day));
 
         // Claim milestone.
@@ -458,7 +447,7 @@ contract GMCheckInMilestoneTest is GMCheckInTestBase {
         _claimMilestone(alice, BRONZE);
 
         assertGt(garc.balanceOf(alice) - gArcBefore, 0);
-        assertEq(garc.balanceOf(alice) - gArcBefore, claimUsdc);
+        assertEq(garc.balanceOf(alice) - gArcBefore, _gArcFor(claimUsdc));
         assertEq(gm.totalMilestoneClaims(), 1);
     }
 

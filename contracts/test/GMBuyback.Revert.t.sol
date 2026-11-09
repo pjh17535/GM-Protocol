@@ -6,7 +6,7 @@ import {GMBuyback} from "../GMBuyback.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
 
-/// @dev Tests: deployment state, all revert paths, pause, setReserveVault.
+/// @dev Tests: deployment state, all revert paths, pause, setAuthorizedCaller.
 contract GMBuybackRevertTest is GMBuybackTestBase {
 
     // ══════════════════════════════════════════════════════════════════════
@@ -17,8 +17,9 @@ contract GMBuybackRevertTest is GMBuybackTestBase {
         assertEq(buyback.owner(), owner);
     }
 
-    function test_Deploy_ReserveVaultIsSet() public view {
-        assertEq(buyback.reserveVault(), reserveVault);
+    function test_Deploy_NoCallerAuthorizedByDefault() public view {
+        assertFalse(buyback.authorizedCallers(owner));
+        assertFalse(buyback.authorizedCallers(alice));
     }
 
     function test_Deploy_DefaultParams() public view {
@@ -148,34 +149,6 @@ contract GMBuybackRevertTest is GMBuybackTestBase {
         // Should now succeed.
         vm.prank(alice);
         buyback.executeBuyback();
-    }
-
-    // ══════════════════════════════════════════════════════════════════════
-    //  setReserveVault — access control
-    // ══════════════════════════════════════════════════════════════════════
-
-    function test_SetReserveVault_OnlyOwner() public {
-        address newVault = makeAddr("newVault");
-        vm.prank(alice);
-        vm.expectRevert(
-            abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, alice)
-        );
-        buyback.setReserveVault(newVault);
-    }
-
-    function test_SetReserveVault_OwnerSucceeds() public {
-        address newVault = makeAddr("newVault");
-        vm.prank(owner);
-        buyback.setReserveVault(newVault);
-        assertEq(buyback.reserveVault(), newVault);
-    }
-
-    function test_SetReserveVault_EmitsEvent() public {
-        address newVault = makeAddr("newVault");
-        vm.prank(owner);
-        vm.expectEmit(true, false, false, false, address(buyback));
-        emit GMBuyback.ReserveVaultUpdated(newVault);
-        buyback.setReserveVault(newVault);
     }
 
     // ══════════════════════════════════════════════════════════════════════

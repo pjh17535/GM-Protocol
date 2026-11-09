@@ -19,10 +19,13 @@ GM Protocol is a daily onchain check-in system built on Arc Network. Users pay a
 | GMCheckIn v1 (已弃用) | `0x15631A27ab630477A28d43f3096A60F79370f445` | [View](https://explorer.testnet.arc.io/address/0x15631A27ab630477A28d43f3096A60F79370f445) |
 | GMCheckIn v2 (已弃用) | `0x61CaF38cd22D8cc9567f48274f1137Cf3395cC9c` | [View](https://explorer.testnet.arc.io/address/0x61CaF38cd22D8cc9567f48274f1137Cf3395cC9c) |
 | GMCheckIn v3 (快照+女巫验证+GMPool，已弃用) | `0xA66Af89712660e0b6c1AACc666f74f0A4Df3BEF7` | [View](https://explorer.testnet.arc.io/address/0xA66Af89712660e0b6c1AACc666f74f0A4Df3BEF7) |
-| GMCheckIn v3.1 (含partnerCheckin，正式) | `0xDb04Dd85fDbcE5b76d63230264475Fcb07c316A8` | [View](https://explorer.testnet.arc.io/address/0xDb04Dd85fDbcE5b76d63230264475Fcb07c316A8) |
-| GMPartner (合作项目模板，测试实例: GM Protocol test) | `0x353ecd9a42F908D2BE7f59572D9f8cCCAEd8Fa70` | [View](https://explorer.testnet.arc.io/address/0x353ecd9a42F908D2BE7f59572D9f8cCCAEd8Fa70) |
+| GMCheckIn v3.1 (已弃用: 领奖gARC未换算、快照USDC卡住) | `0xDb04Dd85fDbcE5b76d63230264475Fcb07c316A8` | [View](https://explorer.testnet.arc.io/address/0xDb04Dd85fDbcE5b76d63230264475Fcb07c316A8) |
+| GMPartner v1 测试实例 (已弃用: 10%回购份额未转出) | `0x353ecd9a42F908D2BE7f59572D9f8cCCAEd8Fa70` | [View](https://explorer.testnet.arc.io/address/0x353ecd9a42F908D2BE7f59572D9f8cCCAEd8Fa70) |
 | GMSoulBound (SBT 灵魂绑定徽章) | `0xB845E2f69d7D5426896B4083594B3C26D4bB8ff2` | [View](https://explorer.testnet.arc.io/address/0xB845E2f69d7D5426896B4083594B3C26D4bB8ff2) |
-| GMBuyback (回购销毁执行器) | `0x611F40BdaEfF0e247b0C454725d8e531256a070a` | [View](https://explorer.testnet.arc.io/address/0x611F40BdaEfF0e247b0C454725d8e531256a070a) |
+| GMBuyback v1 (已弃用: 从未成功执行) | `0x611F40BdaEfF0e247b0C454725d8e531256a070a` | [View](https://explorer.testnet.arc.io/address/0x611F40BdaEfF0e247b0C454725d8e531256a070a) |
+| GMCheckIn v3.2 (当前，正式；领奖按LP即时价换算，快照全额买入销毁) | `0xBBf46cE9E2e3bA2819c113Ef05857023d68AfcAf` | [View](https://explorer.testnet.arc.io/address/0xBBf46cE9E2e3bA2819c113Ef05857023d68AfcAf) |
+| GMBuyback v2 (当前，正式；snapshot买入销毁 + 合作项目份额由keeper触发) | `0xaC2A2c6F2590624d2FC6231dBCd05dc5A60f4De7` | [View](https://explorer.testnet.arc.io/address/0xaC2A2c6F2590624d2FC6231dBCd05dc5A60f4De7) |
+| GMPartner v1.1 测试实例: GM Protocol test (当前；operator 0x1697...，待注资激活) | `0x15Cd101c1093c2198FbA09031C610e51Fb4F285D` | [View](https://explorer.testnet.arc.io/address/0x15Cd101c1093c2198FbA09031C610e51Fb4F285D) |
 | GMPool v1 (已弃用) | `0x9f128829b987C970cbe7E29037A11a37E453FDC9` | [View](https://explorer.testnet.arc.io/address/0x9f128829b987C970cbe7E29037A11a37E453FDC9) |
 | GMPool v2 (含gARC Claim池，正式) | `0xC3832c0169C1602D581cC6816414Ad05A855e713` | [View](https://explorer.testnet.arc.io/address/0xC3832c0169C1602D581cC6816414Ad05A855e713) |
 | USDC/gARC LP Pair (Uniswap V2) | `0xc0e9695ab4e41f4477074845046b3d152c4c8958` | [View](https://explorer.testnet.arc.io/address/0xc0e9695ab4e41f4477074845046b3d152c4c8958) |
@@ -93,3 +96,17 @@ bun run dev
 - Brand assets: `public/brand/` holds the horizontal banner (transparent and navy, SVG and PNG), a 16:9 cover (1600x900) for X long posts and `og-image.png` (1200x630) used by the link-preview tags in `index.html`. The SVGs have outlined text, so they do not depend on fonts. They were generated from the logo in `src/components/GMProtocolLogo.tsx`; regenerate if the logo changes.
 - Arc House screenshots: `docs/arc-house/` holds real captures of the live site (1280x720 at 2x), taken with a headless browser against the Netlify URL. Wallet-connected shots use a read-only wallet shim that reports the public test wallet address and forwards reads to the RPC, so the data is real but nothing can be signed. Skip the My GM milestone cards in headless shots: the sandbox has no emoji font, so the icons render as empty boxes.
 - OPEN QUESTION (contract): `GMCheckIn.claimMilestone` sets `gArcAmount = claimUsdc` with no decimals conversion or price. claimUsdc has 6 decimals and gARC has 18, so a claim would transfer a negligible gARC amount. Confirm intent and add a test before anyone claims on testnet.
+
+## v3.2 部署记录 (2026-11-09, Arc Testnet)
+修复: 领奖gARC换算(小数位+LP即时价)、快照USDC全额买入销毁(失败回滚)、合作项目10%回购份额转给GMBuyback、已结束日期才能快照、跨日预留额度、禁止放弃所有权、两步所有权转移。430项测试通过(含Arc测试网fork完整领奖流程)，三轮安全审查最后一轮无新增问题。
+- GMBuyback v2 部署 TX: `0x1b00cdc66de5b3a559ba2700197287bdcad78e6c7eaf3389217967a1b1054fd6`
+- GMCheckIn v3.2 部署 TX: `0xf26020589d0b92ec8555384d8e76215b4743e46d64238704d87b4f5db782b8f6`
+- buyback.setAuthorizedCaller(v3.2): `0x8751fa277eeed70ec832006060f294fb8c0d2bea0b291851e17064f826b1a51e`
+- checkin.setSoulBoundContract: `0x25c080b1d17fe21fda70a4e146078f92d2dce18a7befc5f0d3845efc4055f86f` (v3.1 从未设置过SBT，所以之前领奖不会铸徽章)
+- pool.setCheckinContract: `0xd5a6fb7fe4579245ae9682986b151610c716155601b7234e3e31f45f5923f257`
+- pool.setBuybackContract: `0xb76597c94de741b664589692353a228122eca5ea19cfe7c6d0e0b310632f62c8`
+- sbt.setMinter: `0x7d302212cbcb5b93067194a47765cdc33360e3138e27d28b14b2fab72e8b09e9`
+- GMPartner v1.1 部署 TX: `0xa5a28e90531b3f39ffc2ff02674282731f7180d1cdc8420aed279302f8d0ba83`
+- checkin.setPartnerRegistered: `0xa6abf0ba3a965087e7f9bfbb18ad4a06509955ffb4f0dd01a64aff17d689beaf`
+- 部署脚本: scripts/deploy-v32.ts
+已知并接受的风险(主网前必须处理): LP即时价格可被操纵(换TWAP)、回购滑点基于当下报价、POOL_RESERVE(10%)无人花费、合作项目领奖直接付USDC无领奖时销毁、合作项目预留额度未领取会一直占用、每笔领奖消耗大量gARC(浅池)、owner仍可调用withdrawProtocol/withdrawPartner/setCheckinContract。

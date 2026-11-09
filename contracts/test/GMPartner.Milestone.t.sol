@@ -306,6 +306,7 @@ contract GMPartnerMilestoneTest is GMPartnerTestBase {
         partner.queueMilestoneClaim(0);
 
         uint256 totalUsdc = partner.snapshotTotalClaimUsdc(dayIndex);
+        vm.warp((dayIndex + 1) * DAY);
         vm.expectEmit(true, false, false, true, address(partner));
         emit GMPartner.SnapshotExecuted(dayIndex, totalUsdc, block.timestamp);
         partner.executeSnapshot(dayIndex);
@@ -314,6 +315,8 @@ contract GMPartnerMilestoneTest is GMPartnerTestBase {
     // ── Internal helper to execute snapshot (anyone can call) ─────────────
 
     function gm_executeSnapshot(uint256 dayIndex) internal {
+        // executeSnapshot requires a CLOSED day: warp to the first second of the next day.
+        vm.warp((dayIndex + 1) * DAY);
         partner.executeSnapshot(dayIndex);
     }
 }

@@ -17,14 +17,23 @@ contract MockUniswapV2Router {
     ///      Constant → baked into bytecode → survives vm.etch.
     uint256 public constant GARC_OUT_PER_USDC = 2_000e18;
 
+    /// @dev Failure mode, stored in storage (set via setMode AFTER the etch).
+    ///      0 = normal, 1 = swap reverts, 2 = quote returns 0, 3 = swap delivers 0 gARC.
+    uint8 public mode;
+
+    function setMode(uint8 newMode) external {
+        mode = newMode;
+    }
+
     /// @dev Returns [amountIn, garcOut] for a two-hop USDC→gARC path.
     function getAmountsOut(uint256 amountIn, address[] calldata /*path*/)
         external
-        pure
+        view
         returns (uint256[] memory amounts)
     {
         amounts = new uint256[](2);
         amounts[0] = amountIn;
+        if (mode == 2) return amounts;
         // garcOut = amountIn * GARC_OUT_PER_USDC / 1e6
         amounts[1] = (amountIn * GARC_OUT_PER_USDC) / 1e6;
     }
@@ -37,11 +46,13 @@ contract MockUniswapV2Router {
         address to,
         uint256 /*deadline*/
     ) external returns (uint256[] memory amounts) {
+        if (mode == 1) revert("MockRouter: swap failed");
         // Pull USDC from the caller (GMBuyback has already approved us).
         MockERC20(path[0]).transferFrom(msg.sender, address(this), amountIn);
 
         // Compute and mint gARC to `to`.
         uint256 garcOut = (amountIn * GARC_OUT_PER_USDC) / 1e6;
+        if (mode == 3) garcOut = 0;
         MockERC20(path[1]).mint(to, garcOut);
 
         amounts = new uint256[](2);

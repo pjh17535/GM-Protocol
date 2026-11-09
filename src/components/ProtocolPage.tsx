@@ -7,7 +7,7 @@ const CHAIN_ID = arcTestnet.id
 
 // ── Addresses ─────────────────────────────────────────────────────────────────
 const POOL_ADDR    = '0xC3832c0169C1602D581cC6816414Ad05A855e713' as const
-const CHECKIN_ADDR = '0xDb04Dd85fDbcE5b76d63230264475Fcb07c316A8' as const
+const CHECKIN_ADDR = '0xBBf46cE9E2e3bA2819c113Ef05857023d68AfcAf' as const
 const GARC_ADDR    = '0x742f1c4D413d13913c80D9b6A35002C2b7D8b9Fc' as const
 const PAIR_ADDR    = '0xc0e9695ab4e41f4477074845046b3d152c4c8958' as const
 
@@ -55,9 +55,9 @@ const fmt18B = (v: bigint | undefined) => {
 // ── Contract registry ─────────────────────────────────────────────────────────
 const CONTRACTS = [
   { name: 'GMToken (gARC)',      addr: '0x742f1c4D413d13913c80D9b6A35002C2b7D8b9Fc', note: 'ERC-20, mint-once 10B, burn-only' },
-  { name: 'GMCheckIn v3.1',      addr: '0xDb04Dd85fDbcE5b76d63230264475Fcb07c316A8', note: 'Daily check-in, milestone queue, partner integration' },
+  { name: 'GMCheckIn v3.2',      addr: '0xBBf46cE9E2e3bA2819c113Ef05857023d68AfcAf', note: 'Daily check-in, milestone queue, gARC claims at pool spot price, snapshot buyback-and-burn' },
   { name: 'GMPool v2',           addr: '0xC3832c0169C1602D581cC6816414Ad05A855e713', note: '80/10/5/5 USDC split, gARC claim pool' },
-  { name: 'GMBuyback',           addr: '0x611F40BdaEfF0e247b0C454725d8e531256a070a', note: 'Uniswap V2 buyback-and-burn, 3-layer trigger' },
+  { name: 'GMBuyback',           addr: '0xaC2A2c6F2590624d2FC6231dBCd05dc5A60f4De7', note: 'Swaps USDC to gARC on Uniswap V2 and burns it: every snapshot, plus partner shares via keepers' },
   { name: 'GMSoulBound (SBT)',   addr: '0xB845E2f69d7D5426896B4083594B3C26D4bB8ff2', note: 'Non-transferable identity badges, 5 on-chain SVG tiers' },
   { name: 'USDC/gARC LP Pair',   addr: '0xc0e9695ab4e41f4477074845046b3d152c4c8958', note: 'Uniswap V2 pair (live reserves are shown above)' },
 ]

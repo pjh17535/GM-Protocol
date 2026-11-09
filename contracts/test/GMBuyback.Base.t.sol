@@ -35,7 +35,7 @@ abstract contract GMBuybackTestBase is Test {
     address internal owner        = makeAddr("owner");
     address internal alice        = makeAddr("alice");
     address internal bob          = makeAddr("bob");
-    address internal reserveVault = makeAddr("reserveVault");
+    address internal caller1      = makeAddr("caller1");
 
     // ── Mock handles ──────────────────────────────────────────────────────
     MockERC20             internal usdc;
@@ -67,16 +67,14 @@ abstract contract GMBuybackTestBase is Test {
         router = MockUniswapV2Router(ROUTER_ADDR);
 
         // 4. Deploy contract under test.
-        buyback = new GMBuyback(owner, reserveVault);
+        buyback = new GMBuyback(owner);
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────
 
-    /// Seed reserveVault with USDC and grant the buyback contract an allowance.
+    /// Seed the GMBuyback contract itself with USDC (it spends its own balance).
     function _fundVault(uint256 amount) internal {
-        usdc.mint(reserveVault, amount);
-        vm.prank(reserveVault);
-        usdc.approve(address(buyback), amount);
+        usdc.mint(address(buyback), amount);
     }
 
     /// Advance time by `periods` full cooldown periods.

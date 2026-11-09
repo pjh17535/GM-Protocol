@@ -2,12 +2,14 @@
 pragma solidity ^0.8.20;
 
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import {Ownable2Step} from "@openzeppelin/contracts/access/Ownable2Step.sol";
 import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import {MessageHashUtils} from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
+import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 
 interface IGMPool {
     function receiveCheckinFee(uint256 amount) external;
@@ -20,13 +22,19 @@ interface IGMPool {
 interface IGMBuyback {
     function executeBuyback() external;
     function canExecute() external view returns (bool);
+    function buybackAndBurn(uint256 usdcAmount) external returns (uint256 garcBurned);
+}
+
+interface IUniswapV2Pair {
+    function getReserves() external view returns (uint112 reserve0, uint112 reserve1, uint32 blockTimestampLast);
+    function token0() external view returns (address);
 }
 
 interface IGMSoulBound {
     function mint(address to, uint8 tier, string calldata partnerName) external returns (uint256);
 }
 
-contract GMCheckIn is Ownable, Pausable, ReentrancyGuard {
+contract GMCheckIn is Ownable2Step, Pausable, ReentrancyGuard {
     using SafeERC20 for IERC20;
 
     uint256 public constant DAY_SECONDS = 86400;
@@ -53,6 +61,7 @@ contract GMCheckIn is Ownable, Pausable, ReentrancyGuard {
     IGMPool public gmPool;
     IGMBuyback public gmBuyback;
     IGMSoulBound public soulBoundContract;
+    address public immutable lpPair;
 
     bool public verificationEnabled;
     address public signer;
@@ -61,6 +70,7 @@ contract GMCheckIn is Ownable, Pausable, ReentrancyGuard {
 
     mapping(uint256 => uint256) public snapshotTotalClaimUsdc;
     mapping(uint256 => uint256) public snapshotReservedUsdc;
+    uint256 public outstandingReservedUsdc;
     mapping(uint256 => bool) public snapshotExecuted;
     mapping(address => mapping(uint8 => uint256)) public pendingClaimDay;
     mapping(address => mapping(uint8 => uint256)) public pendingClaimUsdc;
@@ -88,6 +98,7 @@ contract GMCheckIn is Ownable, Pausable, ReentrancyGuard {
     error MilestoneAlreadyQueued(uint8 tier, uint256 queuedDay);
     error MilestoneAlreadyClaimedForCurrentCycle(uint8 tier);
     error ZeroClaimAmount();
+    error InvalidLpReserves();
     error VerificationRequired(uint8 tier, uint8 requiredLevel, uint8 currentLevel);
     error InvalidSignature();
     error SignatureExpired(uint256 deadline);
@@ -95,12 +106,15 @@ contract GMCheckIn is Ownable, Pausable, ReentrancyGuard {
     error NoPendingClaim(uint8 tier);
     error SnapshotAlreadyExecuted(uint256 dayIndex);
     error NoClaimsToSnapshot(uint256 dayIndex);
+    error DayNotClosed(uint256 dayIndex);
+    error RenounceDisabled();
     error InsufficientRewardPool(uint256 required, uint256 available);
     error NotRegisteredPartner();
 
     event CheckedIn(address indexed user, uint256 dayIndex, uint256 streak, uint256 fee);
     event MilestoneQueued(address indexed user, uint8 tier, uint256 dayIndex, uint256 claimUsdc);
     event SnapshotExecuted(uint256 indexed dayIndex, uint256 totalUsdc, uint256 timestamp);
+    event SnapshotBuyback(uint256 indexed dayIndex, uint256 usdcSpent, uint256 garcBurned);
     event MilestoneClaimed(address indexed user, uint8 tier, uint256 usdcAmount, uint256 gArcAmount, uint256 dayIndex);
     event VerificationCompleted(address indexed user, uint8 tier, uint8 newLevel);
     event CheckinFeeUpdated(uint256 oldFee, uint256 newFee);
@@ -112,12 +126,14 @@ contract GMCheckIn is Ownable, Pausable, ReentrancyGuard {
     event PartnerCheckinRecorded(address indexed user, address indexed partner, uint256 dayIndex, uint256 streak);
     event PartnerRegistered(address indexed partner, bool registered);
 
-    constructor(address initialOwner, address _gmPool, address _gmBuyback) Ownable(initialOwner) {
+    constructor(address initialOwner, address _gmPool, address _gmBuyback, address _lpPair) Ownable(initialOwner) {
         _validateNonZero(_gmPool);
         _validateNonZero(_gmBuyback);
+        _validateNonZero(_lpPair);
 
         gmPool = IGMPool(_gmPool);
         gmBuyback = IGMBuyback(_gmBuyback);
+        lpPair = _lpPair;
 
         checkinFee = 100_000;
         verificationEnabled = false;
@@ -242,12 +258,12 @@ contract GMCheckIn is Ownable, Pausable, ReentrancyGuard {
         uint256 usdcToPull = (claimUsdc * BUYBACK_TOTAL_PARTS + (BUYBACK_USER_PARTS - 1)) / BUYBACK_USER_PARTS;
 
         uint256 poolBalance = gmPool.poolBalance(POOL_REWARD);
-        uint256 reserved = snapshotReservedUsdc[dayIndex];
-        uint256 available = poolBalance > reserved ? poolBalance - reserved : 0;
+        uint256 available = poolBalance > outstandingReservedUsdc ? poolBalance - outstandingReservedUsdc : 0;
         if (usdcToPull > available) revert InsufficientRewardPool(usdcToPull, available);
 
         pendingClaimDay[msg.sender][tier] = dayIndex;
         pendingClaimUsdc[msg.sender][tier] = claimUsdc;
+        outstandingReservedUsdc += usdcToPull;
 
         unchecked {
             snapshotReservedUsdc[dayIndex] += usdcToPull;
@@ -257,19 +273,22 @@ contract GMCheckIn is Ownable, Pausable, ReentrancyGuard {
         emit MilestoneQueued(msg.sender, tier, dayIndex, claimUsdc);
     }
 
-    function executeSnapshot(uint256 dayIndex) external nonReentrant {
+    function executeSnapshot(uint256 dayIndex) external whenNotPaused nonReentrant {
         if (snapshotExecuted[dayIndex]) revert SnapshotAlreadyExecuted(dayIndex);
 
         uint256 totalUsdc = snapshotTotalClaimUsdc[dayIndex];
         if (totalUsdc == 0) revert NoClaimsToSnapshot(dayIndex);
-        if (dayIndex > _currentDayIndex()) revert InvalidCheckinDay();
+        if (dayIndex >= _currentDayIndex()) revert DayNotClosed(dayIndex);
 
         snapshotExecuted[dayIndex] = true;
+        outstandingReservedUsdc -= totalUsdc;
 
         gmPool.withdrawReward(totalUsdc, address(this));
+        USDC.forceApprove(address(gmBuyback), totalUsdc);
+        uint256 burned = gmBuyback.buybackAndBurn(totalUsdc);
+        USDC.forceApprove(address(gmBuyback), 0);
 
-        try gmBuyback.executeBuyback() {} catch {}
-
+        emit SnapshotBuyback(dayIndex, totalUsdc, burned);
         emit SnapshotExecuted(dayIndex, totalUsdc, block.timestamp);
     }
 
@@ -283,7 +302,8 @@ contract GMCheckIn is Ownable, Pausable, ReentrancyGuard {
         uint256 claimUsdc = pendingClaimUsdc[msg.sender][tier];
         if (claimUsdc == 0) revert ZeroClaimAmount();
 
-        uint256 gArcAmount = claimUsdc;
+        uint256 gArcAmount = gArcForUsdc(claimUsdc);
+        if (gArcAmount == 0) revert ZeroClaimAmount();
 
         pendingClaimDay[msg.sender][tier] = 0;
         pendingClaimUsdc[msg.sender][tier] = 0;
@@ -302,6 +322,19 @@ contract GMCheckIn is Ownable, Pausable, ReentrancyGuard {
         if (address(soulBoundContract) != address(0)) {
             try soulBoundContract.mint(msg.sender, tier, "") {} catch {}
         }
+    }
+
+    /**
+     * @dev Converts USDC to gARC using the LP spot price at claim time. Spot pricing is manipulable and must be replaced by a TWAP before mainnet.
+     */
+    function gArcForUsdc(uint256 usdcAmount) public view returns (uint256) {
+        (uint112 reserve0, uint112 reserve1,) = IUniswapV2Pair(lpPair).getReserves();
+        bool usdcIsToken0 = IUniswapV2Pair(lpPair).token0() == address(USDC);
+        uint256 reserveUsdc = usdcIsToken0 ? reserve0 : reserve1;
+        uint256 reserveGArc = usdcIsToken0 ? reserve1 : reserve0;
+        if (reserveUsdc == 0 || reserveGArc == 0) revert InvalidLpReserves();
+
+        return Math.mulDiv(usdcAmount, reserveGArc, reserveUsdc);
     }
 
     function completeVerification(uint8 tier, uint256 deadline, bytes calldata signature) external {
@@ -419,6 +452,11 @@ contract GMCheckIn is Ownable, Pausable, ReentrancyGuard {
     function setPartnerRegistered(address partner, bool registered) external onlyOwner {
         registeredPartners[partner] = registered;
         emit PartnerRegistered(partner, registered);
+    }
+
+    /// @dev Before mainnet, ownership must be handed to a multisig or timelock via transferOwnership and acceptOwnership.
+    function renounceOwnership() public view override onlyOwner {
+        revert RenounceDisabled();
     }
 
     function pause() external onlyOwner {
